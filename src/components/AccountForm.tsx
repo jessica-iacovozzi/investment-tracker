@@ -60,6 +60,39 @@ const buildPayload = (id: string, changes: Partial<AccountInput>) => ({
   changes,
 })
 
+const clampMonth = (value: number, maxMonth: number) =>
+  Math.min(Math.max(value, 1), maxMonth)
+
+const getAdjustedContributionRange = ({
+  contribution,
+  termYears,
+  previousTotalMonths,
+}: {
+  contribution?: AccountInput['contribution']
+  termYears: number
+  previousTotalMonths?: number
+}) => {
+  if (!contribution) {
+    return null
+  }
+
+  const totalMonths = Math.max(Math.round(termYears * 12), 1)
+  const priorTotalMonths =
+    previousTotalMonths ?? Math.max(Math.round(termYears * 12), 1)
+  const startMonth = clampMonth(contribution.startMonth, totalMonths)
+  const shouldExtendEndMonth =
+    totalMonths > priorTotalMonths && contribution.endMonth === priorTotalMonths
+  const endMonthBase = shouldExtendEndMonth
+    ? totalMonths
+    : contribution.endMonth
+  const endMonth = clampMonth(
+    Math.max(endMonthBase, startMonth),
+    totalMonths,
+  )
+
+  return { startMonth, endMonth }
+}
+
 const FREQUENCY_OPTIONS: ContributionFrequency[] = [
   'bi-weekly',
   'monthly',
@@ -123,12 +156,33 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
   }
 
   const handleTermChange = (value: string) => {
-    handleNumericInputChange({
-      field: 'termYears',
-      value,
-      onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { termYears: nextValue })),
-    })
+    const parsed = Number(value)
+    const isInvalid = value === '' || Number.isNaN(parsed)
+    const adjustedRange = isInvalid
+      ? null
+      : getAdjustedContributionRange({
+          contribution: account.contribution,
+          termYears: parsed,
+          previousTotalMonths: Math.max(Math.round(account.termYears * 12), 1),
+        })
+
+    setNumericInputs((prev) => ({
+      ...prev,
+      termYears: value,
+      ...(adjustedRange
+        ? {
+            contributionStartMonth: formatNumberInput(adjustedRange.startMonth),
+            contributionEndMonth: formatNumberInput(adjustedRange.endMonth),
+          }
+        : {}),
+    }))
+
+    if (isInvalid) {
+      onUpdate(buildPayload(account.id, { termYears: 0 }))
+      return
+    }
+
+    onUpdate(buildPayload(account.id, { termYears: parsed }))
   }
 
   const handleCurrentAgeChange = (value: string) => {

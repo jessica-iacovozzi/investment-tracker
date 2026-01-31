@@ -9,10 +9,6 @@ Ship a static-hosted version of the app with in-app share guidance, a privacy no
 **Current:** Complete
 **Completed:** 21/21 tasks (100%)
 
-Copy set:
-- Share hint: “Share this app: https://your-hosted-url”
-- Privacy note: “Data stays in your browser.”
-
 Hosting target:
 - Vercel (primary), with SPA fallback via `vercel.json`
 

@@ -23,10 +23,17 @@ const adjustContributionRange = (
     return payload
   }
 
+  const previousTotalMonths = Math.max(Math.round(account.termYears * 12), 1)
   const totalMonths = Math.max(Math.round(payload.changes.termYears * 12), 1)
   const startMonth = clampMonth(account.contribution.startMonth, totalMonths)
+  const shouldExtendEndMonth =
+    totalMonths > previousTotalMonths &&
+    account.contribution.endMonth === previousTotalMonths
+  const endMonthBase = shouldExtendEndMonth
+    ? totalMonths
+    : account.contribution.endMonth
   const endMonth = clampMonth(
-    Math.max(account.contribution.endMonth, startMonth),
+    Math.max(endMonthBase, startMonth),
     totalMonths,
   )
 

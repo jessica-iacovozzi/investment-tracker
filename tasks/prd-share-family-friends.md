@@ -56,7 +56,6 @@ Make the investment tracker accessible to family and friends via a public URL us
 ### Security & Privacy
 - No authentication.
 - No data transmission; local storage only.
-- Provide a brief privacy note: “Data stays in your browser.”
 
 ### Performance
 - App should load under 3 seconds on a typical broadband connection.
