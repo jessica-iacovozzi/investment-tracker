@@ -443,29 +443,6 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
         />
       </div>
 
-      {hasContribution ? (
-        <div className="field-group">
-          <label htmlFor={`${account.id}-timing`}>Contribution timing</label>
-          <select
-            id={`${account.id}-timing`}
-            value={normalizedTiming}
-            onChange={(event) =>
-              handleContributionTimingChange(event.target.value)
-            }
-            aria-describedby={`${account.id}-timing-help`}
-          >
-            {timingOptions.map((option) => (
-              <option key={option} value={option}>
-                {CONTRIBUTION_TIMING_LABELS[option]}
-              </option>
-            ))}
-          </select>
-          <p id={`${account.id}-timing-help`} className="field-help">
-            {timingHelpText}
-          </p>
-        </div>
-      ) : null}
-
       {hasContribution && account.contribution ? (
         <div className="field-row field-row--stack">
           <div className="field-group">
@@ -499,44 +476,65 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
             </select>
           </div>
 
-          <div className="field-group">
-            <label htmlFor={`${account.id}-start`}>
-              Start month (1 - {totalMonths})
-            </label>
-            <input
-              id={`${account.id}-start`}
-              type="number"
-              min="1"
-              max={totalMonths}
-              value={numericInputs.contributionStartMonth}
-              aria-describedby={`${account.id}-start-help`}
+          <div className="field-group field-group--full">
+            <label htmlFor={`${account.id}-timing`}>Contribution timing</label>
+            <select
+              id={`${account.id}-timing`}
+              value={normalizedTiming}
               onChange={(event) =>
-                handleContributionChange('startMonth', event.target.value)
+                handleContributionTimingChange(event.target.value)
               }
-            />
-            <p id={`${account.id}-start-help`} className="field-help">
-              Month the first contribution is applied within the term.
+              aria-describedby={`${account.id}-timing-help`}
+            >
+              {timingOptions.map((option) => (
+                <option key={option} value={option}>
+                  {CONTRIBUTION_TIMING_LABELS[option]}
+                </option>
+              ))}
+            </select>
+            <p id={`${account.id}-timing-help`} className="field-help">
+              {timingHelpText}
             </p>
           </div>
 
-          <div className="field-group">
-            <label htmlFor={`${account.id}-end`}>
-              End month (1 - {totalMonths})
-            </label>
-            <input
-              id={`${account.id}-end`}
-              type="number"
-              min="1"
-              max={totalMonths}
-              value={numericInputs.contributionEndMonth}
-              aria-describedby={`${account.id}-end-help`}
-              onChange={(event) =>
-                handleContributionChange('endMonth', event.target.value)
-              }
-            />
-            <p id={`${account.id}-end-help`} className="field-help">
-              Month the last contribution is applied within the term.
-            </p>
+            <div className="field-group">
+              <label htmlFor={`${account.id}-start`}>
+                Start month (1 - {totalMonths})
+              </label>
+              <input
+                id={`${account.id}-start`}
+                type="number"
+                min="1"
+                max={totalMonths}
+                value={numericInputs.contributionStartMonth}
+                aria-describedby={`${account.id}-start-help`}
+                onChange={(event) =>
+                  handleContributionChange('startMonth', event.target.value)
+                }
+              />
+              <p id={`${account.id}-start-help`} className="field-help">
+                Month the first contribution is applied within the term.
+              </p>
+            </div>
+
+            <div className="field-group">
+              <label htmlFor={`${account.id}-end`}>
+                End month (1 - {totalMonths})
+              </label>
+              <input
+                id={`${account.id}-end`}
+                type="number"
+                min="1"
+                max={totalMonths}
+                value={numericInputs.contributionEndMonth}
+                aria-describedby={`${account.id}-end-help`}
+                onChange={(event) =>
+                  handleContributionChange('endMonth', event.target.value)
+                }
+              />
+              <p id={`${account.id}-end-help`} className="field-help">
+                Month the last contribution is applied within the term.
+              </p>
           </div>
         </div>
       ) : null}

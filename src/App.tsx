@@ -216,7 +216,10 @@ function App() {
           </p>
           {hasAccounts ? (
             <div className="app__totals" aria-live="polite">
-              <div className="app__total-card" aria-label="Grand total">
+              <div
+                className="app__total-card app__total-card--grand"
+                aria-label="Grand total"
+              >
                 <span className="app__total-card-label">Grand total</span>
                 <span className="app__total-card-value">
                   {formatCurrency(grandTotals.finalBalance)}
