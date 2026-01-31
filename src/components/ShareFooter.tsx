@@ -7,7 +7,7 @@ type ShareFooterProps = {
 type CopyStatus = 'idle' | 'success' | 'error'
 
 function ShareFooter({
-  shareUrl = 'https://your-hosted-url',
+  shareUrl = 'https://personal-multi-investment-tracker.vercel.app/',
 }: ShareFooterProps) {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
   const hasClipboard =

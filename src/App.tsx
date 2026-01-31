@@ -153,7 +153,7 @@ function App() {
   const shareUrl =
     typeof window !== 'undefined'
       ? window.location.origin
-      : 'https://your-hosted-url'
+      : 'https://personal-multi-investment-tracker.vercel.app/'
 
   useEffect(() => {
     saveAccounts({ accounts, storageAvailable })
@@ -214,30 +214,33 @@ function App() {
             Model each investment separately, tune recurring contributions, and
             compare growth over time.
           </p>
-          <div className="app__grand-total" aria-live="polite">
-            <span className="app__grand-total-label">Grand total</span>
-            <span className="app__grand-total-value">
-              {formatCurrency(grandTotals.finalBalance)}
-            </span>
-            <div className="app__grand-total-details">
-              <div>
-                <span className="app__grand-total-detail-label">
+          {hasAccounts ? (
+            <div className="app__totals" aria-live="polite">
+              <div className="app__total-card" aria-label="Grand total">
+                <span className="app__total-card-label">Grand total</span>
+                <span className="app__total-card-value">
+                  {formatCurrency(grandTotals.finalBalance)}
+                </span>
+              </div>
+              <div
+                className="app__total-card"
+                aria-label="Total contributions"
+              >
+                <span className="app__total-card-label">
                   Total contributions
                 </span>
-                <span className="app__grand-total-detail-value">
+                <span className="app__total-card-value">
                   {formatCurrency(grandTotals.totalContributions)}
                 </span>
               </div>
-              <div>
-                <span className="app__grand-total-detail-label">
-                  Total returns
-                </span>
-                <span className="app__grand-total-detail-value">
+              <div className="app__total-card" aria-label="Total returns">
+                <span className="app__total-card-label">Total returns</span>
+                <span className="app__total-card-value">
                   {formatCurrency(grandTotals.totalReturns)}
                 </span>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
         <div className="app__actions">
           <button

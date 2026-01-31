@@ -3,10 +3,10 @@
 A client-only investment projection app for modeling multiple accounts, contributions, and growth over time.
 
 ## Live App
-- **Public URL:** https://your-hosted-url
+- **Public URL:** https://personal-multi-investment-tracker.vercel.app/
 
 ## Share & Privacy
-- Share this link with family and friends: **https://your-hosted-url**
+- Share this link with family and friends: **https://personal-multi-investment-tracker.vercel.app/**
 - **Data stays in your browser.** Inputs are stored locally on each device.
 - No accounts, no analytics, no backend services.
 
