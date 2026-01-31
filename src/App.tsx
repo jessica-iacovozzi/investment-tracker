@@ -305,6 +305,17 @@ function App() {
       )}
 
       <ShareFooter shareUrl={shareUrl} />
+      <footer className="app__credit">
+        Made by{' '}
+        <a
+          className="app__credit-link"
+          href="https://jessicaiacovozzi.vercel.app/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Jessica Iacovozzi
+        </a>
+      </footer>
     </div>
   )
 }
