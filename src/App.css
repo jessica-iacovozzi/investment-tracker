@@ -451,6 +451,10 @@
   height: 260px;
 }
 
+.recharts-default-legend {
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 900px) {
   .app__header {
     flex-direction: column;

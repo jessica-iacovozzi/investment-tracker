@@ -9,13 +9,36 @@ import {
   YAxis,
 } from 'recharts'
 import type { ProjectionPoint } from '../types/investment'
-import { formatCurrency, formatNumber } from '../utils/formatters'
+import { formatCompactNumber, formatCurrency, formatNumber } from '../utils/formatters'
 
 type AccountChartProps = {
   data: ProjectionPoint[]
 }
 
-const formatYearTick = (value: number) => `${formatNumber(value)}y`
+const MAX_YEAR_TICK_SEGMENTS = 6
+
+const formatYearTick = (value: number) => `${Math.round(value)}y`
+
+const getYearTicks = (points: ProjectionPoint[]) => {
+  if (points.length === 0) {
+    return []
+  }
+
+  const minYear = points.reduce((min, point) => Math.min(min, point.year), points[0].year)
+  const maxYear = points.reduce((max, point) => Math.max(max, point.year), points[0].year)
+  const step = Math.max(1, Math.round((maxYear - minYear) / MAX_YEAR_TICK_SEGMENTS))
+  const ticks: number[] = []
+
+  for (let year = minYear; year <= maxYear; year += step) {
+    ticks.push(year)
+  }
+
+  if (ticks[ticks.length - 1] !== maxYear) {
+    ticks.push(maxYear)
+  }
+
+  return ticks
+}
 
 function AccountChart({ data }: AccountChartProps) {
   return (
@@ -28,11 +51,12 @@ function AccountChart({ data }: AccountChartProps) {
             <XAxis
               dataKey="year"
               tickFormatter={formatYearTick}
+              ticks={getYearTicks(data)}
               stroke="rgba(255, 255, 255, 0.7)"
               tickMargin={8}
             />
             <YAxis
-              tickFormatter={formatCurrency}
+              tickFormatter={formatCompactNumber}
               width={70}
               stroke="rgba(255, 255, 255, 0.7)"
             />
@@ -46,7 +70,7 @@ function AccountChart({ data }: AccountChartProps) {
               }}
               itemStyle={{ color: '#f5f5f5' }}
             />
-            <Legend verticalAlign="top" height={24} />
+            <Legend verticalAlign="top" />
             <Line
               type="monotone"
               dataKey="balance"
