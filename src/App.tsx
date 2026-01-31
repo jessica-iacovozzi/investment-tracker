@@ -42,63 +42,69 @@ const buildNewAccount = (index: number): AccountInput => {
   }
 }
 
-const seedAccounts = (): AccountInput[] => [
-  {
-    id: buildId(),
-    name: 'Brokerage',
-    currentAge: 30,
-    principal: 18500,
-    annualRatePercent: 7.2,
-    compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
-    termYears: 12,
-    contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
-    contribution: {
-      amount: 300,
-      frequency: 'monthly',
-      startMonth: 1,
-      endMonth: 144,
-    },
-  },
-  {
-    id: buildId(),
-    name: 'Roth IRA',
-    currentAge: 34,
-    principal: 9200,
-    annualRatePercent: 6.1,
-    compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
-    termYears: 15,
-    contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
-    contribution: {
-      amount: 500,
-      frequency: 'quarterly',
-      startMonth: 1,
-      endMonth: 180,
-    },
-  },
-]
+const seedAccounts = (): AccountInput[] =>
+  import.meta.env.PROD
+    ? []
+    : [
+        {
+          id: buildId(),
+          name: 'Brokerage',
+          currentAge: 30,
+          principal: 18500,
+          annualRatePercent: 7.2,
+          compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
+          termYears: 12,
+          contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
+          contribution: {
+            amount: 300,
+            frequency: 'monthly',
+            startMonth: 1,
+            endMonth: 144,
+          },
+        },
+        {
+          id: buildId(),
+          name: 'Roth IRA',
+          currentAge: 34,
+          principal: 9200,
+          annualRatePercent: 6.1,
+          compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
+          termYears: 15,
+          contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
+          contribution: {
+            amount: 500,
+            frequency: 'quarterly',
+            startMonth: 1,
+            endMonth: 180,
+          },
+        },
+      ]
+
+const normalizeAccounts = (accounts: AccountInput[]) =>
+  accounts.map((account) => normalizeAccount({ account }).account)
 
 const STORAGE_KEY = 'investment-tracker-accounts'
 
 const loadAccounts = ({ storageAvailable }: { storageAvailable: boolean }) => {
   if (typeof window === 'undefined' || !storageAvailable) {
-    return seedAccounts()
+    return normalizeAccounts(seedAccounts())
   }
 
   const storedValue = window.localStorage.getItem(STORAGE_KEY)
   if (!storedValue) {
-    return seedAccounts()
+    return normalizeAccounts(seedAccounts())
   }
 
   try {
     const parsed = JSON.parse(storedValue) as AccountInput[]
     if (!parsed.length) {
-      return seedAccounts()
+      return normalizeAccounts(seedAccounts())
     }
 
-    return parsed.map((account) => normalizeAccount({ account }).account)
+    return normalizeAccounts(parsed)
   } catch (error) {
     console.warn('Failed to load saved accounts.', error)
-    return seedAccounts()
+    return normalizeAccounts(seedAccounts())
   }
 }
 
@@ -143,6 +149,7 @@ function App() {
   const [accounts, setAccounts] = useState<AccountInput[]>(() =>
     loadAccounts({ storageAvailable }),
   )
+  const hasAccounts = accounts.length > 0
   const shareUrl =
     typeof window !== 'undefined'
       ? window.location.origin
@@ -168,7 +175,7 @@ function App() {
       return
     }
     clearAccounts({ storageAvailable })
-    setAccounts(seedAccounts())
+    setAccounts(normalizeAccounts(seedAccounts()))
   }
 
   const handleDeleteAccount = (id: string) => {
@@ -260,16 +267,39 @@ function App() {
         </div>
       )}
 
-      <section className="account-grid" aria-label="Investment accounts">
-        {accounts.map((account) => (
-          <AccountCard
-            key={account.id}
-            account={account}
-            onUpdate={handleAccountUpdate}
-            onDelete={handleDeleteAccount}
-          />
-        ))}
-      </section>
+      {hasAccounts ? (
+        <section className="account-grid" aria-label="Investment accounts">
+          {accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              onUpdate={handleAccountUpdate}
+              onDelete={handleDeleteAccount}
+            />
+          ))}
+        </section>
+      ) : (
+        <section
+          className="empty-state"
+          role="status"
+          aria-live="polite"
+          aria-label="No accounts yet"
+        >
+          <p className="empty-state__eyebrow">No accounts yet</p>
+          <h2 className="empty-state__title">Start with your first account.</h2>
+          <p className="empty-state__body">
+            Add a retirement, brokerage, or savings account to begin forecasting
+            growth over time.
+          </p>
+          <button
+            className="button button--primary"
+            type="button"
+            onClick={handleAddAccount}
+          >
+            + Add your first account
+          </button>
+        </section>
+      )}
 
       <ShareFooter shareUrl={shareUrl} />
     </div>
