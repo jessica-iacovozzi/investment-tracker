@@ -344,6 +344,12 @@
   margin-top: 0.25rem;
 }
 
+@media (max-width: 720px) {
+  .chart-card {
+    display: none;
+  }
+}
+
 .summary-card,
 .chart-card {
   background: rgba(15, 18, 28, 0.8);

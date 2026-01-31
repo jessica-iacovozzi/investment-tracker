@@ -95,9 +95,6 @@ function AccountCard({ account, onUpdate, onDelete }: AccountCardProps) {
       <div className="account-card__header">
         <h2 className="account-card__title">{account.name}</h2>
         <div className="account-card__actions">
-          <span className="account-card__meta">
-            {projection.points.length - 1} months projected
-          </span>
           <button
             className="button button--danger"
             type="button"

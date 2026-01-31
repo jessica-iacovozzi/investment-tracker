@@ -242,7 +242,7 @@ function App() {
             </div>
           ) : null}
         </div>
-        <div className="app__actions">
+        { hasAccounts ? <div className="app__actions">
           <button
             className="button button--ghost"
             type="button"
@@ -257,7 +257,7 @@ function App() {
           >
             + Add account
           </button>
-        </div>
+        </div> : null}
       </header>
 
       {!storageAvailable && (
