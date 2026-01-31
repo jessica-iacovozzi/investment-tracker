@@ -36,19 +36,8 @@ function ShareFooter({
         : ''
 
   return (
-    <footer className="share-footer" aria-label="Share this app">
+    <section className="share-footer" aria-label="Share this app">
       <p className="share-footer__title">Share this app</p>
-      <p className="share-footer__hint">
-        Share this app:{' '}
-        <a
-          className="share-footer__link"
-          href={shareUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {shareUrl}
-        </a>
-      </p>
       <div className="share-footer__actions">
         <button
           className="button button--ghost"
@@ -67,8 +56,7 @@ function ShareFooter({
           </span>
         )}
       </div>
-      <p className="share-footer__privacy">Data stays in your browser.</p>
-    </footer>
+    </section>
   )
 }
 
