@@ -117,6 +117,10 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
     onUpdate(buildPayload(account.id, { name: value }))
   }
 
+  const handleLockedInChange = (checked: boolean) => {
+    onUpdate(buildPayload(account.id, { isLockedIn: checked }))
+  }
+
   const handleNumericInputChange = ({
     field,
     value,
@@ -372,6 +376,36 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
             {ageHelpText}
           </p>
         </div>
+      </div>
+
+      <div className="field-group field-group--toggle">
+        <label htmlFor={`${account.id}-locked-in`} className="field-label--with-info">
+          Locked-in account
+          <span className="field-label__info" title="Locked-in accounts (e.g., LIRA) cannot receive additional contributions. They will be excluded from goal contribution allocation.">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+          </span>
+        </label>
+        <input
+          id={`${account.id}-locked-in`}
+          type="checkbox"
+          checked={account.isLockedIn ?? false}
+          onChange={(event) => handleLockedInChange(event.target.checked)}
+        />
       </div>
 
       <div className="field-row">

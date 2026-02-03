@@ -5,6 +5,7 @@ import type {
   GoalCalculationResult,
 } from '../types/goal'
 import { getEffectiveMonthlyRate } from './compounding'
+import { buildProjection } from './projections'
 
 const CONTRIBUTION_PERIODS_PER_YEAR: Record<ContributionFrequency, number> = {
   'bi-weekly': 26,
@@ -76,6 +77,20 @@ export const getWeightedAverageRate = (accounts: AccountInput[]): number => {
 }
 
 /**
+ * Calculate the projected future value of accounts including their existing contributions.
+ */
+export const calculateFutureValueWithExistingContributions = (
+  accounts: AccountInput[],
+  termYears: number,
+): number => {
+  return accounts.reduce((total, account) => {
+    const accountWithTerm = { ...account, termYears }
+    const projection = buildProjection(accountWithTerm)
+    return total + projection.totals.finalBalance
+  }, 0)
+}
+
+/**
  * Calculate the required contribution per period to reach a target balance.
  * Uses an iterative approach to find the contribution amount.
  */
@@ -111,13 +126,12 @@ export const calculateRequiredContribution = ({
     }
   }
 
-  const termMonths = termYears * 12
-  const futureValueWithoutContributions = calculateFutureValueWithoutContributions(
+  const futureValueWithExistingContributions = calculateFutureValueWithExistingContributions(
     accounts,
-    termMonths,
+    termYears,
   )
 
-  if (futureValueWithoutContributions >= targetBalance) {
+  if (futureValueWithExistingContributions >= targetBalance) {
     return {
       isReachable: true,
       requiredContribution: 0,
@@ -126,6 +140,11 @@ export const calculateRequiredContribution = ({
     }
   }
 
+  const termMonths = termYears * 12
+  const futureValueWithoutContributions = calculateFutureValueWithoutContributions(
+    accounts,
+    termMonths,
+  )
   const amountNeeded = targetBalance - futureValueWithoutContributions
   const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[contributionFrequency]
   const weightedRate = getWeightedAverageRate(accounts)
@@ -336,47 +355,62 @@ export const calculateAllocation = ({
     return []
   }
 
+  const contributableAccounts = accounts.filter((acc) => !acc.isLockedIn)
+  const lockedAccounts = accounts.filter((acc) => acc.isLockedIn)
+
   const buildAllocation = (
     account: AccountInput,
     suggestedContribution: number,
   ): AccountAllocation => {
     const currentContribution = getCurrentContribution(account, targetFrequency)
-    const additionalContribution = Math.max(
-      0,
-      Math.round((suggestedContribution - currentContribution) * 100) / 100,
-    )
+    const additionalContribution = account.isLockedIn
+      ? 0
+      : Math.max(
+          0,
+          Math.round((suggestedContribution - currentContribution) * 100) / 100,
+        )
     return {
       accountId: account.id,
       accountName: account.name,
-      suggestedContribution,
+      suggestedContribution: account.isLockedIn ? currentContribution : suggestedContribution,
       currentContribution,
       additionalContribution,
       currentBalance: account.principal,
       annualRatePercent: account.annualRatePercent,
+      isLockedIn: account.isLockedIn,
     }
   }
 
+  const buildLockedAllocations = (): AccountAllocation[] =>
+    lockedAccounts.map((account) => buildAllocation(account, 0))
+
+  if (contributableAccounts.length === 0) {
+    return buildLockedAllocations()
+  }
+
   if (strategy === 'equal') {
-    const perAccount = totalContribution / accounts.length
-    return accounts.map((account) =>
+    const perAccount = totalContribution / contributableAccounts.length
+    const contributableAllocations = contributableAccounts.map((account) =>
       buildAllocation(account, Math.round(perAccount * 100) / 100),
     )
+    return [...contributableAllocations, ...buildLockedAllocations()]
   }
 
   if (strategy === 'highest-return') {
-    const sorted = [...accounts].sort(
+    const sorted = [...contributableAccounts].sort(
       (a, b) => b.annualRatePercent - a.annualRatePercent,
     )
-    return sorted.map((account, index) =>
+    const contributableAllocations = sorted.map((account, index) =>
       buildAllocation(account, index === 0 ? totalContribution : 0),
     )
+    return [...contributableAllocations, ...buildLockedAllocations()]
   }
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.principal, 0)
+  const totalBalance = contributableAccounts.reduce((sum, acc) => sum + acc.principal, 0)
 
   if (totalBalance === 0) {
-    const perAccount = totalContribution / accounts.length
-    const allocations = accounts.map((account, index) => ({
+    const perAccount = totalContribution / contributableAccounts.length
+    const allocations = contributableAccounts.map((account, index) => ({
       ...buildAllocation(account, Math.round(perAccount * 100) / 100),
       _index: index,
     }))
@@ -388,7 +422,7 @@ export const calculateAllocation = ({
       applyRemainderAdjustment(allocations[0], remainder)
     }
 
-    return allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent }) => ({
+    const contributableAllocations = allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent, isLockedIn }) => ({
       accountId,
       accountName,
       suggestedContribution,
@@ -396,10 +430,12 @@ export const calculateAllocation = ({
       additionalContribution,
       currentBalance,
       annualRatePercent,
+      isLockedIn,
     }))
+    return [...contributableAllocations, ...buildLockedAllocations()]
   }
 
-  const allocations = accounts.map((account, index) => {
+  const allocations = contributableAccounts.map((account, index) => {
     const proportion = account.principal / totalBalance
     const suggestedContribution =
       Math.round(totalContribution * proportion * 100) / 100
@@ -422,7 +458,7 @@ export const calculateAllocation = ({
     applyRemainderAdjustment(allocations[largestIndex], remainder)
   }
 
-  return allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent }) => ({
+  const contributableAllocations = allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent, isLockedIn }) => ({
     accountId,
     accountName,
     suggestedContribution,
@@ -430,7 +466,9 @@ export const calculateAllocation = ({
     additionalContribution,
     currentBalance,
     annualRatePercent,
+    isLockedIn,
   }))
+  return [...contributableAllocations, ...buildLockedAllocations()]
 }
 
 /**

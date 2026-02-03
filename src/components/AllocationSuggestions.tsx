@@ -66,18 +66,39 @@ function AllocationSuggestions({
               allocation.additionalContribution === 0
                 ? 'allocation-suggestions__item--on-track'
                 : ''
-            }`}
+            } ${allocation.isLockedIn ? 'allocation-suggestions__item--locked' : ''}`}
           >
             <div className="allocation-suggestions__account">
               <span className="allocation-suggestions__account-name">
                 {allocation.accountName}
+                {allocation.isLockedIn && (
+                  <span className="allocation-suggestions__locked-badge" title="Locked-in account - no additional contributions allowed">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                )}
               </span>
               <span className="allocation-suggestions__account-rate">
                 Current: {formatCurrency(allocation.currentContribution)}/{frequencyLabel}
               </span>
             </div>
             <div className="allocation-suggestions__contribution">
-              {allocation.additionalContribution > 0 ? (
+              {allocation.isLockedIn ? (
+                <span className="allocation-suggestions__locked">Locked</span>
+              ) : allocation.additionalContribution > 0 ? (
                 <>
                   <span className="allocation-suggestions__amount allocation-suggestions__amount--additional">
                     +{formatCurrency(allocation.additionalContribution)}

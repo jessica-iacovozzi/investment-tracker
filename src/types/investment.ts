@@ -42,6 +42,7 @@ export type AccountInput = {
   currentAge?: number
   contributionTiming: ContributionTiming
   contribution?: ContributionSchedule
+  isLockedIn?: boolean
 }
 
 export type AccountUpdatePayload = {

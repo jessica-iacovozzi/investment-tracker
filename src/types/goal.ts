@@ -29,6 +29,7 @@ export type AccountAllocation = {
   additionalContribution: number
   currentBalance: number
   annualRatePercent: number
+  isLockedIn?: boolean
 }
 
 export const DEFAULT_GOAL_STATE: GoalState = {
