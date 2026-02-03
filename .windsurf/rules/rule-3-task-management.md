@@ -1,3 +1,7 @@
+---
+trigger: model_decision
+description: When executing tasks from a task-prd file or implementing features sequentially
+---
 # Rule 3: Autonomous Task Execution
 
 ## Goal
