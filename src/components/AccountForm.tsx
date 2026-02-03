@@ -413,19 +413,21 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
         </div>
       </div>
 
-      <div className="field-group field-group--toggle">
-        <label htmlFor={`${account.id}-recurring`}>
-          Recurring contributions
-        </label>
-        <input
-          id={`${account.id}-recurring`}
-          type="checkbox"
-          checked={hasContribution}
-          onChange={(event) => handleContributionToggle(event.target.checked)}
-        />
-      </div>
+      {!account.isLockedIn && (
+        <div className="field-group field-group--toggle">
+          <label htmlFor={`${account.id}-recurring`}>
+            Recurring contributions
+          </label>
+          <input
+            id={`${account.id}-recurring`}
+            type="checkbox"
+            checked={hasContribution}
+            onChange={(event) => handleContributionToggle(event.target.checked)}
+          />
+        </div>
+      )}
 
-      {hasContribution && account.contribution ? (
+      {!account.isLockedIn && hasContribution && account.contribution ? (
         <div className="field-row field-row--stack">
           <div className="field-group">
             <label htmlFor={`${account.id}-amount`}>Contribution amount</label>
