@@ -271,6 +271,7 @@ function App() {
       accounts,
       totalContribution,
       strategy: goalState.allocationStrategy,
+      targetFrequency: goalState.contributionFrequency,
     })
   }, [accounts, goalState, hasAccounts, goalCalculationResult])
 

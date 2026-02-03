@@ -236,6 +236,7 @@ describe('calculateAllocation', () => {
       accounts: [],
       totalContribution: 1000,
       strategy: 'proportional',
+      targetFrequency: 'monthly',
     })
     expect(result).toEqual([])
   })
@@ -245,6 +246,7 @@ describe('calculateAllocation', () => {
       accounts: [createMockAccount()],
       totalContribution: 0,
       strategy: 'proportional',
+      targetFrequency: 'monthly',
     })
     expect(result).toEqual([])
   })
@@ -258,6 +260,7 @@ describe('calculateAllocation', () => {
       accounts,
       totalContribution: 1000,
       strategy: 'proportional',
+      targetFrequency: 'monthly',
     })
     expect(result).toHaveLength(2)
     expect(result[0].suggestedContribution).toBe(750)
@@ -273,6 +276,7 @@ describe('calculateAllocation', () => {
       accounts,
       totalContribution: 1000,
       strategy: 'equal',
+      targetFrequency: 'monthly',
     })
     expect(result).toHaveLength(2)
     expect(result[0].suggestedContribution).toBe(500)
@@ -288,6 +292,7 @@ describe('calculateAllocation', () => {
       accounts,
       totalContribution: 1000,
       strategy: 'highest-return',
+      targetFrequency: 'monthly',
     })
     expect(result).toHaveLength(2)
     const highestReturn = result.find((a) => a.annualRatePercent === 8)
@@ -303,9 +308,67 @@ describe('calculateAllocation', () => {
       accounts,
       totalContribution: 1000,
       strategy: 'proportional',
+      targetFrequency: 'monthly',
     })
     expect(result[0].suggestedContribution).toBe(500)
     expect(result[1].suggestedContribution).toBe(500)
+  })
+
+  it('calculates additional contribution needed', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'Account 1',
+        principal: 10000,
+        contribution: { amount: 200, frequency: 'monthly', startMonth: 1, endMonth: 120 },
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 500,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+    })
+    expect(result[0].currentContribution).toBe(200)
+    expect(result[0].additionalContribution).toBe(300)
+  })
+
+  it('shows zero additional when current exceeds suggested', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'Account 1',
+        principal: 10000,
+        contribution: { amount: 600, frequency: 'monthly', startMonth: 1, endMonth: 120 },
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 500,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+    })
+    expect(result[0].currentContribution).toBe(600)
+    expect(result[0].additionalContribution).toBe(0)
+  })
+
+  it('normalizes contribution frequency correctly', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'Account 1',
+        principal: 10000,
+        contribution: { amount: 1200, frequency: 'annually', startMonth: 1, endMonth: 120 },
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 200,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+    })
+    expect(result[0].currentContribution).toBe(100)
+    expect(result[0].additionalContribution).toBe(100)
   })
 })
 

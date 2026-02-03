@@ -264,44 +264,112 @@ export const calculateRequiredTerm = ({
 }
 
 /**
+ * Normalize a contribution amount to monthly equivalent.
+ */
+const normalizeToMonthly = (
+  amount: number,
+  frequency: ContributionFrequency,
+): number => {
+  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[frequency]
+  return (amount * periodsPerYear) / 12
+}
+
+/**
+ * Convert monthly amount to target frequency.
+ */
+const convertFromMonthly = (
+  monthlyAmount: number,
+  targetFrequency: ContributionFrequency,
+): number => {
+  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[targetFrequency]
+  return (monthlyAmount * 12) / periodsPerYear
+}
+
+/**
+ * Get the current contribution for an account, normalized to a target frequency.
+ */
+const getCurrentContribution = (
+  account: AccountInput,
+  targetFrequency: ContributionFrequency,
+): number => {
+  if (!account.contribution) {
+    return 0
+  }
+  const monthlyAmount = normalizeToMonthly(
+    account.contribution.amount,
+    account.contribution.frequency,
+  )
+  return Math.round(convertFromMonthly(monthlyAmount, targetFrequency) * 100) / 100
+}
+
+/**
+ * Apply remainder adjustment to an allocation to ensure total matches exactly.
+ */
+const applyRemainderAdjustment = (
+  allocation: AccountAllocation & { _index: number },
+  remainder: number,
+): void => {
+  const newSuggested = Math.round((allocation.suggestedContribution + remainder) * 100) / 100
+  allocation.suggestedContribution = newSuggested
+  allocation.additionalContribution = Math.max(
+    0,
+    Math.round((newSuggested - allocation.currentContribution) * 100) / 100,
+  )
+}
+
+/**
  * Calculate how to allocate contributions across accounts.
- * Currently supports proportional strategy only (Phase 1 MVP).
+ * Returns suggested total contribution, current contribution, and additional needed.
  */
 export const calculateAllocation = ({
   accounts,
   totalContribution,
   strategy,
+  targetFrequency,
 }: {
   accounts: AccountInput[]
   totalContribution: number
   strategy: AllocationStrategy
+  targetFrequency: ContributionFrequency
 }): AccountAllocation[] => {
   if (accounts.length === 0 || totalContribution <= 0) {
     return []
   }
 
-  if (strategy === 'equal') {
-    const perAccount = totalContribution / accounts.length
-    return accounts.map((account) => ({
+  const buildAllocation = (
+    account: AccountInput,
+    suggestedContribution: number,
+  ): AccountAllocation => {
+    const currentContribution = getCurrentContribution(account, targetFrequency)
+    const additionalContribution = Math.max(
+      0,
+      Math.round((suggestedContribution - currentContribution) * 100) / 100,
+    )
+    return {
       accountId: account.id,
       accountName: account.name,
-      suggestedContribution: Math.round(perAccount * 100) / 100,
+      suggestedContribution,
+      currentContribution,
+      additionalContribution,
       currentBalance: account.principal,
       annualRatePercent: account.annualRatePercent,
-    }))
+    }
+  }
+
+  if (strategy === 'equal') {
+    const perAccount = totalContribution / accounts.length
+    return accounts.map((account) =>
+      buildAllocation(account, Math.round(perAccount * 100) / 100),
+    )
   }
 
   if (strategy === 'highest-return') {
     const sorted = [...accounts].sort(
       (a, b) => b.annualRatePercent - a.annualRatePercent,
     )
-    return sorted.map((account, index) => ({
-      accountId: account.id,
-      accountName: account.name,
-      suggestedContribution: index === 0 ? totalContribution : 0,
-      currentBalance: account.principal,
-      annualRatePercent: account.annualRatePercent,
-    }))
+    return sorted.map((account, index) =>
+      buildAllocation(account, index === 0 ? totalContribution : 0),
+    )
   }
 
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.principal, 0)
@@ -309,11 +377,7 @@ export const calculateAllocation = ({
   if (totalBalance === 0) {
     const perAccount = totalContribution / accounts.length
     const allocations = accounts.map((account, index) => ({
-      accountId: account.id,
-      accountName: account.name,
-      suggestedContribution: Math.round(perAccount * 100) / 100,
-      currentBalance: account.principal,
-      annualRatePercent: account.annualRatePercent,
+      ...buildAllocation(account, Math.round(perAccount * 100) / 100),
       _index: index,
     }))
 
@@ -321,14 +385,15 @@ export const calculateAllocation = ({
     const remainder = Math.round((totalContribution - allocatedSum) * 100) / 100
 
     if (remainder !== 0 && allocations.length > 0) {
-      allocations[0].suggestedContribution =
-        Math.round((allocations[0].suggestedContribution + remainder) * 100) / 100
+      applyRemainderAdjustment(allocations[0], remainder)
     }
 
-    return allocations.map(({ accountId, accountName, suggestedContribution, currentBalance, annualRatePercent }) => ({
+    return allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent }) => ({
       accountId,
       accountName,
       suggestedContribution,
+      currentContribution,
+      additionalContribution,
       currentBalance,
       annualRatePercent,
     }))
@@ -340,11 +405,7 @@ export const calculateAllocation = ({
       Math.round(totalContribution * proportion * 100) / 100
 
     return {
-      accountId: account.id,
-      accountName: account.name,
-      suggestedContribution,
-      currentBalance: account.principal,
-      annualRatePercent: account.annualRatePercent,
+      ...buildAllocation(account, suggestedContribution),
       _index: index,
     }
   })
@@ -358,14 +419,15 @@ export const calculateAllocation = ({
         curr.suggestedContribution > arr[maxIdx].suggestedContribution ? idx : maxIdx,
       0,
     )
-    allocations[largestIndex].suggestedContribution =
-      Math.round((allocations[largestIndex].suggestedContribution + remainder) * 100) / 100
+    applyRemainderAdjustment(allocations[largestIndex], remainder)
   }
 
-  return allocations.map(({ accountId, accountName, suggestedContribution, currentBalance, annualRatePercent }) => ({
+  return allocations.map(({ accountId, accountName, suggestedContribution, currentContribution, additionalContribution, currentBalance, annualRatePercent }) => ({
     accountId,
     accountName,
     suggestedContribution,
+    currentContribution,
+    additionalContribution,
     currentBalance,
     annualRatePercent,
   }))

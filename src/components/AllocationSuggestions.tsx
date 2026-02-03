@@ -14,23 +14,25 @@ function AllocationSuggestions({
     return null
   }
 
-  const totalContribution = allocations.reduce(
-    (sum, a) => sum + a.suggestedContribution,
-    0,
-  )
+  const totalAdditional = Math.round(
+    allocations.reduce((sum, a) => sum + a.additionalContribution, 0) * 100
+  ) / 100
 
-  const frequencyLabel =
-    frequency === 'bi-weekly'
-      ? 'bi-week'
-      : frequency === 'annually'
-        ? 'year'
-        : frequency.replace('ly', '')
+  const FREQUENCY_LABELS: Record<string, string> = {
+    'bi-weekly': 'bi-week',
+    monthly: 'month',
+    quarterly: 'quarter',
+    annually: 'year',
+  }
+  const frequencyLabel = FREQUENCY_LABELS[frequency] || frequency
+
+  const hasAdditionalNeeded = totalAdditional > 0
 
   return (
     <div className="allocation-suggestions">
       <h3 className="allocation-suggestions__title">
-        Suggested Allocation
-        <span className="allocation-suggestions__info" title="Contributions are distributed proportionally based on each account's current balance relative to your total portfolio.">
+        {hasAdditionalNeeded ? 'Additional Contributions Needed' : 'You\'re On Track!'}
+        <span className="allocation-suggestions__info" title="Shows how much MORE you need to contribute to each account beyond your current settings to reach your goal.">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -47,35 +49,46 @@ function AllocationSuggestions({
             <path d="M12 16v-4" />
             <path d="M12 8h.01" />
           </svg>
-          <span className="sr-only">Info: Contributions are distributed proportionally based on each account's current balance.</span>
+          <span className="sr-only">Info: Shows additional contributions needed beyond current settings.</span>
         </span>
       </h3>
       <p className="allocation-suggestions__subtitle">
-        Distribute {formatCurrency(totalContribution)}/{frequencyLabel} across
-        your accounts
+        {hasAdditionalNeeded
+          ? `Increase contributions by ${formatCurrency(totalAdditional)}/${frequencyLabel} total`
+          : 'Your current contributions meet or exceed the goal requirements'}
       </p>
 
       <ul className="allocation-suggestions__list" role="list">
         {allocations.map((allocation) => (
           <li
             key={allocation.accountId}
-            className="allocation-suggestions__item"
+            className={`allocation-suggestions__item ${
+              allocation.additionalContribution === 0
+                ? 'allocation-suggestions__item--on-track'
+                : ''
+            }`}
           >
             <div className="allocation-suggestions__account">
               <span className="allocation-suggestions__account-name">
                 {allocation.accountName}
               </span>
               <span className="allocation-suggestions__account-rate">
-                {allocation.annualRatePercent}% APY
+                Current: {formatCurrency(allocation.currentContribution)}/{frequencyLabel}
               </span>
             </div>
             <div className="allocation-suggestions__contribution">
-              <span className="allocation-suggestions__amount">
-                {formatCurrency(allocation.suggestedContribution)}
-              </span>
-              <span className="allocation-suggestions__frequency">
-                /{frequencyLabel}
-              </span>
+              {allocation.additionalContribution > 0 ? (
+                <>
+                  <span className="allocation-suggestions__amount allocation-suggestions__amount--additional">
+                    +{formatCurrency(allocation.additionalContribution)}
+                  </span>
+                  <span className="allocation-suggestions__frequency">
+                    /{frequencyLabel}
+                  </span>
+                </>
+              ) : (
+                <span className="allocation-suggestions__on-track">✓ On track</span>
+              )}
             </div>
           </li>
         ))}

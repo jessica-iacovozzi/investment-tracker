@@ -3,11 +3,13 @@ import { render, screen, cleanup } from '@testing-library/react'
 import AllocationSuggestions from './AllocationSuggestions'
 import type { AccountAllocation } from '../types/goal'
 
-const createAllocations = (): AccountAllocation[] => [
+const createAllocationsWithAdditional = (): AccountAllocation[] => [
   {
     accountId: '1',
     accountName: 'Brokerage',
     suggestedContribution: 750,
+    currentContribution: 300,
+    additionalContribution: 450,
     currentBalance: 30000,
     annualRatePercent: 7,
   },
@@ -15,6 +17,29 @@ const createAllocations = (): AccountAllocation[] => [
     accountId: '2',
     accountName: 'Roth IRA',
     suggestedContribution: 250,
+    currentContribution: 100,
+    additionalContribution: 150,
+    currentBalance: 10000,
+    annualRatePercent: 6,
+  },
+]
+
+const createAllocationsOnTrack = (): AccountAllocation[] => [
+  {
+    accountId: '1',
+    accountName: 'Brokerage',
+    suggestedContribution: 300,
+    currentContribution: 400,
+    additionalContribution: 0,
+    currentBalance: 30000,
+    annualRatePercent: 7,
+  },
+  {
+    accountId: '2',
+    accountName: 'Roth IRA',
+    suggestedContribution: 100,
+    currentContribution: 200,
+    additionalContribution: 0,
     currentBalance: 10000,
     annualRatePercent: 6,
   },
@@ -35,7 +60,7 @@ describe('AllocationSuggestions', () => {
   it('renders account names', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="monthly"
       />
     )
@@ -43,42 +68,53 @@ describe('AllocationSuggestions', () => {
     expect(screen.getByText('Roth IRA')).toBeTruthy()
   })
 
-  it('renders suggested contributions', () => {
+  it('renders additional contributions needed', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="monthly"
       />
     )
-    expect(screen.getByText('$750')).toBeTruthy()
-    expect(screen.getByText('$250')).toBeTruthy()
+    expect(screen.getByText('+$450')).toBeTruthy()
+    expect(screen.getByText('+$150')).toBeTruthy()
   })
 
-  it('renders annual rates', () => {
+  it('renders current contributions', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="monthly"
       />
     )
-    expect(screen.getByText('7% APY')).toBeTruthy()
-    expect(screen.getByText('6% APY')).toBeTruthy()
+    expect(screen.getByText('Current: $300/month')).toBeTruthy()
+    expect(screen.getByText('Current: $100/month')).toBeTruthy()
   })
 
-  it('shows total contribution in subtitle', () => {
+  it('shows total additional in subtitle when needed', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="monthly"
       />
     )
-    expect(screen.getByText(/\$1,000\/month/)).toBeTruthy()
+    expect(screen.getByText(/Increase contributions by \$600\/month/)).toBeTruthy()
+  })
+
+  it('shows on track message when no additional needed', () => {
+    render(
+      <AllocationSuggestions
+        allocations={createAllocationsOnTrack()}
+        frequency="monthly"
+      />
+    )
+    expect(screen.getByText("You're On Track!")).toBeTruthy()
+    expect(screen.getByText(/meet or exceed/)).toBeTruthy()
   })
 
   it('formats bi-weekly frequency correctly', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="bi-weekly"
       />
     )
@@ -88,7 +124,7 @@ describe('AllocationSuggestions', () => {
   it('formats annually frequency correctly', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="annually"
       />
     )
@@ -98,7 +134,7 @@ describe('AllocationSuggestions', () => {
   it('renders as a list for accessibility', () => {
     render(
       <AllocationSuggestions
-        allocations={createAllocations()}
+        allocations={createAllocationsWithAdditional()}
         frequency="monthly"
       />
     )

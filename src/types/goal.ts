@@ -25,6 +25,8 @@ export type AccountAllocation = {
   accountId: string
   accountName: string
   suggestedContribution: number
+  currentContribution: number
+  additionalContribution: number
   currentBalance: number
   annualRatePercent: number
 }
