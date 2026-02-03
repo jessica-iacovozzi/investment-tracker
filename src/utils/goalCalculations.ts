@@ -308,16 +308,33 @@ export const calculateAllocation = ({
 
   if (totalBalance === 0) {
     const perAccount = totalContribution / accounts.length
-    return accounts.map((account) => ({
+    const allocations = accounts.map((account, index) => ({
       accountId: account.id,
       accountName: account.name,
       suggestedContribution: Math.round(perAccount * 100) / 100,
       currentBalance: account.principal,
       annualRatePercent: account.annualRatePercent,
+      _index: index,
+    }))
+
+    const allocatedSum = allocations.reduce((sum, a) => sum + a.suggestedContribution, 0)
+    const remainder = Math.round((totalContribution - allocatedSum) * 100) / 100
+
+    if (remainder !== 0 && allocations.length > 0) {
+      allocations[0].suggestedContribution =
+        Math.round((allocations[0].suggestedContribution + remainder) * 100) / 100
+    }
+
+    return allocations.map(({ accountId, accountName, suggestedContribution, currentBalance, annualRatePercent }) => ({
+      accountId,
+      accountName,
+      suggestedContribution,
+      currentBalance,
+      annualRatePercent,
     }))
   }
 
-  return accounts.map((account) => {
+  const allocations = accounts.map((account, index) => {
     const proportion = account.principal / totalBalance
     const suggestedContribution =
       Math.round(totalContribution * proportion * 100) / 100
@@ -328,8 +345,30 @@ export const calculateAllocation = ({
       suggestedContribution,
       currentBalance: account.principal,
       annualRatePercent: account.annualRatePercent,
+      _index: index,
     }
   })
+
+  const allocatedSum = allocations.reduce((sum, a) => sum + a.suggestedContribution, 0)
+  const remainder = Math.round((totalContribution - allocatedSum) * 100) / 100
+
+  if (remainder !== 0 && allocations.length > 0) {
+    const largestIndex = allocations.reduce(
+      (maxIdx, curr, idx, arr) =>
+        curr.suggestedContribution > arr[maxIdx].suggestedContribution ? idx : maxIdx,
+      0,
+    )
+    allocations[largestIndex].suggestedContribution =
+      Math.round((allocations[largestIndex].suggestedContribution + remainder) * 100) / 100
+  }
+
+  return allocations.map(({ accountId, accountName, suggestedContribution, currentBalance, annualRatePercent }) => ({
+    accountId,
+    accountName,
+    suggestedContribution,
+    currentBalance,
+    annualRatePercent,
+  }))
 }
 
 /**

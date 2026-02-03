@@ -12,7 +12,7 @@ import {
 import { normalizeAccount } from './utils/accountNormalization'
 import { formatCurrency } from './utils/formatters'
 import { buildProjection } from './utils/projections'
-import { isLocalStorageAvailable, loadGoalState, saveGoalState } from './utils/storage'
+import { isLocalStorageAvailable, loadGoalState, saveGoalState, clearGoalState } from './utils/storage'
 import {
   calculateRequiredContribution,
   calculateRequiredTerm,
@@ -192,7 +192,9 @@ function App() {
       return
     }
     clearAccounts({ storageAvailable })
+    clearGoalState({ storageAvailable })
     setAccounts(normalizeAccounts(seedAccounts()))
+    setGoalState(loadGoalState({ storageAvailable: false }))
   }
 
   const handleDeleteAccount = (id: string) => {
@@ -252,19 +254,22 @@ function App() {
   }, [accounts, goalState, hasAccounts])
 
   const allocations = useMemo(() => {
-    if (
-      !goalState.isGoalMode ||
-      !hasAccounts ||
-      !goalCalculationResult?.isReachable ||
-      goalCalculationResult.requiredContribution === undefined ||
-      goalCalculationResult.requiredContribution === 0
-    ) {
+    if (!goalState.isGoalMode || !hasAccounts || !goalCalculationResult?.isReachable) {
+      return []
+    }
+
+    const totalContribution =
+      goalState.calculationType === 'contribution'
+        ? goalCalculationResult.requiredContribution
+        : goalState.contributionAmount
+
+    if (!totalContribution || totalContribution === 0) {
       return []
     }
 
     return calculateAllocation({
       accounts,
-      totalContribution: goalCalculationResult.requiredContribution,
+      totalContribution,
       strategy: goalState.allocationStrategy,
     })
   }, [accounts, goalState, hasAccounts, goalCalculationResult])

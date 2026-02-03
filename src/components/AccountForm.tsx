@@ -502,7 +502,6 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
               onChange={(event) =>
                 handleContributionTimingChange(event.target.value)
               }
-              aria-describedby={`${account.id}-timing-help`}
             >
               {timingOptions.map((option) => (
                 <option key={option} value={option}>

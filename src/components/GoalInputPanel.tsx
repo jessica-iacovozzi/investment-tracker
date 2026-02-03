@@ -24,7 +24,7 @@ function GoalInputPanel({
   hasAccounts,
 }: GoalInputPanelProps) {
   const handleTargetBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value) || 0
+    const value = Math.max(0, parseFloat(e.target.value) || 0)
     onUpdate({ targetBalance: value })
   }
 
@@ -33,14 +33,14 @@ function GoalInputPanel({
   }
 
   const handleTermYearsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value) || 0
+    const value = Math.max(1, parseFloat(e.target.value) || 1)
     onUpdate({ termYears: value })
   }
 
   const handleContributionAmountChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const value = parseFloat(e.target.value) || 0
+    const value = Math.max(0, parseFloat(e.target.value) || 0)
     onUpdate({ contributionAmount: value })
   }
 

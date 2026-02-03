@@ -6,12 +6,12 @@ type GoalProgressBarProps = {
 }
 
 function GoalProgressBar({ currentBalance, targetBalance }: GoalProgressBarProps) {
-  const percentage = targetBalance > 0 
-    ? Math.min((currentBalance / targetBalance) * 100, 100) 
-    : 0
-  const actualPercentage = targetBalance > 0 
-    ? (currentBalance / targetBalance) * 100 
-    : 0
+  if (targetBalance <= 0) {
+    return null
+  }
+
+  const percentage = Math.min((currentBalance / targetBalance) * 100, 100)
+  const actualPercentage = (currentBalance / targetBalance) * 100
   const isExceeded = actualPercentage > 100
 
   return (

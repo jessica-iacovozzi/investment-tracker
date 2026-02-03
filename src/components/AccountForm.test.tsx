@@ -85,15 +85,13 @@ describe('AccountForm', () => {
     })
   })
 
-  it('connects timing helper text via aria-describedby', () => {
+  it('has info tooltip on timing label', () => {
     const { container } = render(
       <AccountForm account={buildAccount()} onUpdate={vi.fn()} />,
     )
 
-    const timingSelect = within(container).getByLabelText('Contribution timing')
-    expect(timingSelect.getAttribute('aria-describedby')).toBe(
-      'account-1-timing-help',
-    )
-    expect(document.getElementById('account-1-timing-help')).toBeTruthy()
+    const timingLabel = container.querySelector('.field-label--with-info')
+    expect(timingLabel).toBeTruthy()
+    expect(timingLabel?.querySelector('.field-label__info')).toBeTruthy()
   })
 })

@@ -36,9 +36,9 @@ describe('GoalProgressBar', () => {
     expect(screen.getByText('150.0%')).toBeTruthy()
   })
 
-  it('handles zero target balance', () => {
-    render(<GoalProgressBar currentBalance={50000} targetBalance={0} />)
-    expect(screen.getByText('0.0%')).toBeTruthy()
+  it('returns null for zero target balance', () => {
+    const { container } = render(<GoalProgressBar currentBalance={50000} targetBalance={0} />)
+    expect(container.querySelector('.goal-progress')).toBeNull()
   })
 
   it('shows exceeded state when over 100%', () => {
