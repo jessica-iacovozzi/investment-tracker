@@ -18,6 +18,8 @@ const baseAccount: AccountInput = {
   },
 }
 
+// Note: currentAge is now global and not part of AccountInput
+
 describe('normalizeAccount', () => {
   it('falls back to defaults for invalid compounding frequency and timing', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -52,14 +54,4 @@ describe('normalizeAccount', () => {
     expect(account.contributionTiming).toBe('end-of-quarter')
   })
 
-  it('clears invalid ages', () => {
-    const { account } = normalizeAccount({
-      account: {
-        ...baseAccount,
-        currentAge: 200,
-      },
-    })
-
-    expect(account.currentAge).toBeUndefined()
-  })
 })

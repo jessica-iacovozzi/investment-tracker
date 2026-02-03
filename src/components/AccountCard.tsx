@@ -8,6 +8,7 @@ import AccountSummary from './AccountSummary'
 
 type AccountCardProps = {
   account: AccountInput
+  currentAge?: number
   onUpdate: (payload: AccountUpdatePayload) => void
   onDelete: (id: string) => void
 }
@@ -78,7 +79,7 @@ const normalizeContributionTiming = (
   }
 }
 
-function AccountCard({ account, onUpdate, onDelete }: AccountCardProps) {
+function AccountCard({ account, currentAge, onUpdate, onDelete }: AccountCardProps) {
   const projection = useMemo(() => buildProjection(account), [account])
 
   const handleUpdate = (payload: AccountUpdatePayload) => {
@@ -117,7 +118,7 @@ function AccountCard({ account, onUpdate, onDelete }: AccountCardProps) {
         <AccountForm account={account} onUpdate={handleUpdate} />
         <AccountSummary
           totals={projection.totals}
-          currentAge={account.currentAge}
+          currentAge={currentAge}
           termYears={account.termYears}
         />
         <AccountChart data={projection.points} />

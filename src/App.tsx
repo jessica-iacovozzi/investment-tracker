@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AccountCard from './components/AccountCard'
 import AllocationSuggestions from './components/AllocationSuggestions'
+import CurrentAgeInput from './components/CurrentAgeInput'
 import GoalInputPanel from './components/GoalInputPanel'
 import GoalModeToggle from './components/GoalModeToggle'
 import GoalProgressBar from './components/GoalProgressBar'
@@ -37,7 +38,6 @@ const buildNewAccount = (index: number): AccountInput => {
   return {
     id: buildId(),
     name: `Account ${index}`,
-    currentAge: 30,
     principal: 12000,
     annualRatePercent: 6.5,
     compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
@@ -59,7 +59,6 @@ const seedAccounts = (): AccountInput[] =>
         {
           id: buildId(),
           name: 'Brokerage',
-          currentAge: 30,
           principal: 18500,
           annualRatePercent: 7.2,
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
@@ -75,7 +74,6 @@ const seedAccounts = (): AccountInput[] =>
         {
           id: buildId(),
           name: 'Roth IRA',
-          currentAge: 34,
           principal: 9200,
           annualRatePercent: 6.1,
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
@@ -94,6 +92,53 @@ const normalizeAccounts = (accounts: AccountInput[]) =>
   accounts.map((account) => normalizeAccount({ account }).account)
 
 const STORAGE_KEY = 'investment-tracker-accounts'
+const AGE_STORAGE_KEY = 'investment-tracker-current-age'
+const DEFAULT_AGE = 30
+
+const loadCurrentAge = ({ storageAvailable }: { storageAvailable: boolean }): number | undefined => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return import.meta.env.PROD ? undefined : DEFAULT_AGE
+  }
+
+  const storedValue = window.localStorage.getItem(AGE_STORAGE_KEY)
+  if (!storedValue) {
+    return import.meta.env.PROD ? undefined : DEFAULT_AGE
+  }
+
+  const parsed = Number(storedValue)
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 120) {
+    return import.meta.env.PROD ? undefined : DEFAULT_AGE
+  }
+
+  return parsed
+}
+
+const saveCurrentAge = ({
+  currentAge,
+  storageAvailable,
+}: {
+  currentAge: number | undefined
+  storageAvailable: boolean
+}) => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  if (currentAge === undefined) {
+    window.localStorage.removeItem(AGE_STORAGE_KEY)
+    return
+  }
+
+  window.localStorage.setItem(AGE_STORAGE_KEY, String(currentAge))
+}
+
+const clearCurrentAge = ({ storageAvailable }: { storageAvailable: boolean }) => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.removeItem(AGE_STORAGE_KEY)
+}
 
 const loadAccounts = ({ storageAvailable }: { storageAvailable: boolean }) => {
   if (typeof window === 'undefined' || !storageAvailable) {
@@ -162,6 +207,9 @@ function App() {
   const [goalState, setGoalState] = useState<GoalState>(() =>
     loadGoalState({ storageAvailable }),
   )
+  const [currentAge, setCurrentAge] = useState<number | undefined>(() =>
+    loadCurrentAge({ storageAvailable }),
+  )
   const hasAccounts = accounts.length > 0
   const shareUrl =
     typeof window !== 'undefined'
@@ -175,6 +223,10 @@ function App() {
   useEffect(() => {
     saveGoalState({ goalState, storageAvailable })
   }, [goalState, storageAvailable])
+
+  useEffect(() => {
+    saveCurrentAge({ currentAge, storageAvailable })
+  }, [currentAge, storageAvailable])
 
   const handleAccountUpdate = (payload: AccountUpdatePayload) => {
     setAccounts((prev) => updateAccount({ accounts: prev, payload }))
@@ -193,8 +245,10 @@ function App() {
     }
     clearAccounts({ storageAvailable })
     clearGoalState({ storageAvailable })
+    clearCurrentAge({ storageAvailable })
     setAccounts(normalizeAccounts(seedAccounts()))
     setGoalState(loadGoalState({ storageAvailable: false }))
+    setCurrentAge(loadCurrentAge({ storageAvailable: false }))
   }
 
   const handleDeleteAccount = (id: string) => {
@@ -287,11 +341,14 @@ function App() {
               compare growth over time.
             </p>
           </div>
-          <GoalModeToggle
+          <div className="app__header-controls">
+            <CurrentAgeInput currentAge={currentAge} onChange={setCurrentAge} />
+            <GoalModeToggle
             isGoalMode={goalState.isGoalMode}
             onToggle={handleToggleGoalMode}
-            disabled={!hasAccounts}
-          />
+              disabled={!hasAccounts}
+            />
+          </div>
         </div>
         {hasAccounts ? (
           <div className="app__totals" aria-live="polite">
@@ -382,6 +439,7 @@ function App() {
             <AccountCard
               key={account.id}
               account={account}
+              currentAge={currentAge}
               onUpdate={handleAccountUpdate}
               onDelete={handleDeleteAccount}
             />

@@ -12,7 +12,6 @@ const buildAccount = ({
 } = {}): AccountInput => ({
   id: 'account-1',
   name: 'Test Account',
-  currentAge: 30,
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',

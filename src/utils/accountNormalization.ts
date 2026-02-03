@@ -6,7 +6,6 @@ import {
   isValidContributionTiming,
 } from '../constants/compounding'
 import { normalizeTimingForFrequency } from './contributionTiming'
-import { isValidAge } from './ageLabel'
 
 type NormalizeAccountInput = {
   account: AccountInput
@@ -41,15 +40,9 @@ export const normalizeAccount = ({
     console.warn('Invalid compounding or timing settings found. Using defaults.')
   }
 
-  const normalizedAge =
-    account.currentAge === undefined || isValidAge(account.currentAge)
-      ? account.currentAge
-      : undefined
-
   return {
     account: {
       ...account,
-      currentAge: normalizedAge,
       compoundingFrequency: normalizedFrequency,
       contributionTiming: normalizedTiming,
     },

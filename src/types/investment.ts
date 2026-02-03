@@ -39,7 +39,6 @@ export type AccountInput = {
   annualRatePercent: number
   compoundingFrequency: CompoundingFrequency
   termYears: number
-  currentAge?: number
   contributionTiming: ContributionTiming
   contribution?: ContributionSchedule
   isLockedIn?: boolean

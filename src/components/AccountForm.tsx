@@ -17,7 +17,6 @@ import {
   getValidTimingsForFrequency,
   normalizeTimingForFrequency,
 } from '../utils/contributionTiming'
-import { isValidAge } from '../utils/ageLabel'
 
 const DEFAULT_CONTRIBUTION = {
   amount: 200,
@@ -35,7 +34,6 @@ type NumericInputs = {
   principal: string
   annualRatePercent: string
   termYears: string
-  currentAge: string
   contributionAmount: string
   contributionStartMonth: string
   contributionEndMonth: string
@@ -48,7 +46,6 @@ const buildNumericInputs = (input: AccountInput): NumericInputs => ({
   principal: formatNumberInput(input.principal),
   annualRatePercent: formatNumberInput(input.annualRatePercent),
   termYears: formatNumberInput(input.termYears),
-  currentAge: formatNumberInput(input.currentAge),
   contributionAmount: formatNumberInput(input.contribution?.amount),
   contributionStartMonth: formatNumberInput(input.contribution?.startMonth),
   contributionEndMonth: formatNumberInput(input.contribution?.endMonth),
@@ -187,21 +184,6 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
     onUpdate(buildPayload(account.id, { termYears: parsed }))
   }
 
-  const handleCurrentAgeChange = (value: string) => {
-    setNumericInputs((prev) => ({ ...prev, currentAge: value }))
-    if (value === '') {
-      onUpdate(buildPayload(account.id, { currentAge: undefined }))
-      return
-    }
-
-    const parsed = Number(value)
-    if (!Number.isFinite(parsed) || !isValidAge(parsed)) {
-      return
-    }
-
-    onUpdate(buildPayload(account.id, { currentAge: parsed }))
-  }
-
   const handleCompoundingChange = (value: string) => {
     onUpdate(
       buildPayload(account.id, {
@@ -334,48 +316,16 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
     }
   }
 
-  const currentAgeValue = numericInputs.currentAge
-  const parsedAge = Number(currentAgeValue)
-  const showAgeError =
-    currentAgeValue !== '' && (!Number.isFinite(parsedAge) || !isValidAge(parsedAge))
-  const ageHelpText = showAgeError
-    ? 'Enter an age between 0 and 120.'
-    : 'Optional'
-
   return (
     <form className="account-form" aria-label={`${account.name} inputs`}>
-      <div className="field-row">
-        <div className="field-group">
-          <label htmlFor={`${account.id}-name`}>Account name</label>
-          <input
-            id={`${account.id}-name`}
-            type="text"
-            value={account.name}
-            onChange={(event) => handleNameChange(event.target.value)}
-          />
-        </div>
-
-        <div className="field-group">
-          <label htmlFor={`${account.id}-age`}>Current age</label>
-          <input
-            id={`${account.id}-age`}
-            type="number"
-            min="0"
-            max="120"
-            step="1"
-            value={numericInputs.currentAge}
-            onChange={(event) => handleCurrentAgeChange(event.target.value)}
-            aria-describedby={`${account.id}-age-help`}
-            aria-invalid={showAgeError}
-          />
-          <p
-            id={`${account.id}-age-help`}
-            className="field-help"
-            aria-live="polite"
-          >
-            {ageHelpText}
-          </p>
-        </div>
+      <div className="field-group">
+        <label htmlFor={`${account.id}-name`}>Account name</label>
+        <input
+          id={`${account.id}-name`}
+          type="text"
+          value={account.name}
+          onChange={(event) => handleNameChange(event.target.value)}
+        />
       </div>
 
       <div className="field-group field-group--toggle">

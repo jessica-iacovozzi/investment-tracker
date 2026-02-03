@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, within } from '@testing-library/react'
 import type { AccountInput, ContributionFrequency } from '../types/investment'
 import AccountForm from './AccountForm'
 
@@ -12,7 +12,6 @@ const buildAccount = ({
 } = {}): AccountInput => ({
   id: 'account-1',
   name: 'Test Account',
-  currentAge: 30,
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
@@ -27,17 +26,6 @@ const buildAccount = ({
 })
 
 describe('AccountForm', () => {
-  it('shows validation and blocks invalid age updates', () => {
-    const handleUpdate = vi.fn()
-    render(<AccountForm account={buildAccount()} onUpdate={handleUpdate} />)
-
-    const ageInput = screen.getByLabelText('Current age')
-    fireEvent.change(ageInput, { target: { value: '200' } })
-
-    expect(screen.getByText('Enter an age between 0 and 120.')).toBeTruthy()
-    expect(handleUpdate).not.toHaveBeenCalled()
-  })
-
   it('filters timing options based on frequency', () => {
     const { container, rerender } = render(
       <AccountForm account={buildAccount({ frequency: 'monthly' })} onUpdate={vi.fn()} />,
