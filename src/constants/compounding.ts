@@ -55,24 +55,6 @@ export const CONTRIBUTION_TIMING_LABELS: Record<ContributionTiming, string> = {
   'end-of-year': 'End of year',
 }
 
-export const CONTRIBUTION_TIMING_HELP_TEXT: Record<
-  ContributionTiming,
-  string
-> = {
-  'beginning-of-month': 'Applies before compounding for each month.',
-  'end-of-month': 'Applies after compounding for each month.',
-  'beginning-of-quarter':
-    'Applies before compounding for each scheduled quarterly contribution month.',
-  'end-of-quarter':
-    'Applies after compounding for each scheduled quarterly contribution month.',
-  'beginning-of-biweekly':
-    'Applies before compounding for each scheduled biweekly contribution month.',
-  'end-of-biweekly':
-    'Applies after compounding for each scheduled biweekly contribution month.',
-  'beginning-of-year': 'Applies before compounding at each year start.',
-  'end-of-year': 'Applies after compounding at each year end.',
-}
-
 export const isValidCompoundingFrequency = (
   value: string,
 ): value is CompoundingFrequency =>

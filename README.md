@@ -32,6 +32,24 @@ npm run test
 3. Output directory: `dist`
 4. Ensure `vercel.json` is present for SPA fallback rewrites.
 
+## Goal Mode
+
+Goal Mode enables reverse projection calculations - work backward from a financial target to determine either the required contribution amount or the time needed to reach your goal.
+
+### Features
+- **Calculate Required Contribution:** Enter your target balance and term, and the app calculates how much you need to contribute per period
+- **Calculate Required Term:** Enter your target balance and contribution amount, and the app calculates how long it will take to reach your goal
+- **Allocation Suggestions:** When you have multiple accounts, the app suggests how to distribute contributions proportionally based on current balances
+- **Progress Tracking:** Visual progress bar shows how close your projected balance is to your goal
+
+### How to Use
+1. Click the toggle in the header to switch from "Projection Mode" to "Goal Mode"
+2. Enter your target balance (e.g., $1,000,000)
+3. Choose calculation type:
+   - **Calculate Contribution:** Set your term (years) and frequency to see required contribution
+   - **Calculate Term:** Set your contribution amount and frequency to see time to goal
+4. View allocation suggestions to see how to distribute contributions across accounts
+
 ## FAQ
 **Is my data shared with anyone else?**
 No. Data is stored only in your browser.

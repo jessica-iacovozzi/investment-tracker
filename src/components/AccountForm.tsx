@@ -9,7 +9,6 @@ import type {
 import {
   COMPOUNDING_FREQUENCIES,
   COMPOUNDING_FREQUENCY_LABELS,
-  CONTRIBUTION_TIMING_HELP_TEXT,
   CONTRIBUTION_TIMING_LABELS,
 } from '../constants/compounding'
 import { getFrequencyLabel } from '../utils/projections'
@@ -113,7 +112,6 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
     frequency: contributionFrequency,
   })
   const timingOptions = getValidTimingsForFrequency(contributionFrequency)
-  const timingHelpText = CONTRIBUTION_TIMING_HELP_TEXT[normalizedTiming]
 
   const handleNameChange = (value: string) => {
     onUpdate(buildPayload(account.id, { name: value }))
@@ -477,7 +475,27 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
           </div>
 
           <div className="field-group field-group--full">
-            <label htmlFor={`${account.id}-timing`}>Contribution timing</label>
+            <label htmlFor={`${account.id}-timing`} className="field-label--with-info">
+              Contribution timing
+              <span className="field-label__info" title="Determines whether contributions are added before or after compounding occurs in each period. This affects how much interest your contributions earn.">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+              </span>
+            </label>
             <select
               id={`${account.id}-timing`}
               value={normalizedTiming}
@@ -492,14 +510,29 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
                 </option>
               ))}
             </select>
-            <p id={`${account.id}-timing-help`} className="field-help">
-              {timingHelpText}
-            </p>
           </div>
 
             <div className="field-group">
-              <label htmlFor={`${account.id}-start`}>
+              <label htmlFor={`${account.id}-start`} className="field-label--with-info">
                 Start month (1 - {totalMonths})
+                <span className="field-label__info" title="Month the first contribution is applied. Set to 1 to start immediately, or delay by setting a later month.">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                  </svg>
+                </span>
               </label>
               <input
                 id={`${account.id}-start`}
@@ -507,19 +540,33 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
                 min="1"
                 max={totalMonths}
                 value={numericInputs.contributionStartMonth}
-                aria-describedby={`${account.id}-start-help`}
                 onChange={(event) =>
                   handleContributionChange('startMonth', event.target.value)
                 }
               />
-              <p id={`${account.id}-start-help`} className="field-help">
-                Month the first contribution is applied within the term.
-              </p>
             </div>
 
             <div className="field-group">
-              <label htmlFor={`${account.id}-end`}>
+              <label htmlFor={`${account.id}-end`} className="field-label--with-info">
                 End month (1 - {totalMonths})
+                <span className="field-label__info" title="Month the last contribution is applied. Set to total months to contribute throughout, or stop earlier by setting a lower month.">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                  </svg>
+                </span>
               </label>
               <input
                 id={`${account.id}-end`}
@@ -527,14 +574,10 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
                 min="1"
                 max={totalMonths}
                 value={numericInputs.contributionEndMonth}
-                aria-describedby={`${account.id}-end-help`}
                 onChange={(event) =>
                   handleContributionChange('endMonth', event.target.value)
                 }
               />
-              <p id={`${account.id}-end-help`} className="field-help">
-                Month the last contribution is applied within the term.
-              </p>
           </div>
         </div>
       ) : null}

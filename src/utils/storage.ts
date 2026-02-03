@@ -1,3 +1,8 @@
+import type { GoalState } from '../types/goal'
+import { DEFAULT_GOAL_STATE } from '../types/goal'
+
+const GOAL_STORAGE_KEY = 'investment-tracker-goal'
+
 /**
  * Check if localStorage is available for read/write operations.
  */
@@ -15,4 +20,65 @@ export const isLocalStorageAvailable = (): boolean => {
     console.warn('Local storage is unavailable.', error)
     return false
   }
+}
+
+/**
+ * Load goal state from localStorage.
+ */
+export const loadGoalState = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): GoalState => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return DEFAULT_GOAL_STATE
+  }
+
+  const storedValue = window.localStorage.getItem(GOAL_STORAGE_KEY)
+  if (!storedValue) {
+    return DEFAULT_GOAL_STATE
+  }
+
+  try {
+    const parsed = JSON.parse(storedValue) as Partial<GoalState>
+    return {
+      ...DEFAULT_GOAL_STATE,
+      ...parsed,
+    }
+  } catch (error) {
+    console.warn('Failed to load saved goal state.', error)
+    return DEFAULT_GOAL_STATE
+  }
+}
+
+/**
+ * Save goal state to localStorage.
+ */
+export const saveGoalState = ({
+  goalState,
+  storageAvailable,
+}: {
+  goalState: GoalState
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.setItem(GOAL_STORAGE_KEY, JSON.stringify(goalState))
+}
+
+/**
+ * Clear goal state from localStorage.
+ */
+export const clearGoalState = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.removeItem(GOAL_STORAGE_KEY)
 }

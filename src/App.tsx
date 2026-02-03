@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import AccountCard from './components/AccountCard'
+import AllocationSuggestions from './components/AllocationSuggestions'
+import GoalInputPanel from './components/GoalInputPanel'
+import GoalModeToggle from './components/GoalModeToggle'
+import GoalProgressBar from './components/GoalProgressBar'
 import ShareFooter from './components/ShareFooter'
 import {
   DEFAULT_COMPOUNDING_FREQUENCY,
@@ -8,8 +12,14 @@ import {
 import { normalizeAccount } from './utils/accountNormalization'
 import { formatCurrency } from './utils/formatters'
 import { buildProjection } from './utils/projections'
-import { isLocalStorageAvailable } from './utils/storage'
+import { isLocalStorageAvailable, loadGoalState, saveGoalState } from './utils/storage'
+import {
+  calculateRequiredContribution,
+  calculateRequiredTerm,
+  calculateAllocation,
+} from './utils/goalCalculations'
 import type { AccountInput, AccountUpdatePayload } from './types/investment'
+import type { GoalState, GoalCalculationResult } from './types/goal'
 import './App.css'
 
 const buildId = () => {
@@ -149,6 +159,9 @@ function App() {
   const [accounts, setAccounts] = useState<AccountInput[]>(() =>
     loadAccounts({ storageAvailable }),
   )
+  const [goalState, setGoalState] = useState<GoalState>(() =>
+    loadGoalState({ storageAvailable }),
+  )
   const hasAccounts = accounts.length > 0
   const shareUrl =
     typeof window !== 'undefined'
@@ -158,6 +171,10 @@ function App() {
   useEffect(() => {
     saveAccounts({ accounts, storageAvailable })
   }, [accounts, storageAvailable])
+
+  useEffect(() => {
+    saveGoalState({ goalState, storageAvailable })
+  }, [goalState, storageAvailable])
 
   const handleAccountUpdate = (payload: AccountUpdatePayload) => {
     setAccounts((prev) => updateAccount({ accounts: prev, payload }))
@@ -182,6 +199,14 @@ function App() {
     setAccounts((prev) => prev.filter((account) => account.id !== id))
   }
 
+  const handleGoalStateUpdate = (updates: Partial<GoalState>) => {
+    setGoalState((prev) => ({ ...prev, ...updates }))
+  }
+
+  const handleToggleGoalMode = () => {
+    setGoalState((prev) => ({ ...prev, isGoalMode: !prev.isGoalMode }))
+  }
+
   const grandTotals = useMemo(
     () =>
       accounts.reduce(
@@ -204,63 +229,118 @@ function App() {
     [accounts],
   )
 
+  const goalCalculationResult: GoalCalculationResult | null = useMemo(() => {
+    if (!goalState.isGoalMode || !hasAccounts) {
+      return null
+    }
+
+    if (goalState.calculationType === 'contribution') {
+      return calculateRequiredContribution({
+        accounts,
+        targetBalance: goalState.targetBalance,
+        termYears: goalState.termYears ?? 30,
+        contributionFrequency: goalState.contributionFrequency,
+      })
+    }
+
+    return calculateRequiredTerm({
+      accounts,
+      targetBalance: goalState.targetBalance,
+      contributionAmount: goalState.contributionAmount ?? 0,
+      contributionFrequency: goalState.contributionFrequency,
+    })
+  }, [accounts, goalState, hasAccounts])
+
+  const allocations = useMemo(() => {
+    if (
+      !goalState.isGoalMode ||
+      !hasAccounts ||
+      !goalCalculationResult?.isReachable ||
+      goalCalculationResult.requiredContribution === undefined ||
+      goalCalculationResult.requiredContribution === 0
+    ) {
+      return []
+    }
+
+    return calculateAllocation({
+      accounts,
+      totalContribution: goalCalculationResult.requiredContribution,
+      strategy: goalState.allocationStrategy,
+    })
+  }, [accounts, goalState, hasAccounts, goalCalculationResult])
+
   return (
     <div className="app">
       <header className="app__header">
-        <div>
-          <p className="app__eyebrow">Personal investment tracker</p>
-          <h1>Forecast multiple accounts with clarity.</h1>
-          <p className="app__subtitle">
-            Model each investment separately, tune recurring contributions, and
-            compare growth over time.
-          </p>
-          {hasAccounts ? (
-            <div className="app__totals" aria-live="polite">
-              <div
-                className="app__total-card app__total-card--grand"
-                aria-label="Grand total"
-              >
-                <span className="app__total-card-label">Grand total</span>
-                <span className="app__total-card-value">
-                  {formatCurrency(grandTotals.finalBalance)}
-                </span>
-              </div>
-              <div
-                className="app__total-card"
-                aria-label="Total contributions"
-              >
-                <span className="app__total-card-label">
-                  Total contributions
-                </span>
-                <span className="app__total-card-value">
-                  {formatCurrency(grandTotals.totalContributions)}
-                </span>
-              </div>
-              <div className="app__total-card" aria-label="Total returns">
-                <span className="app__total-card-label">Total returns</span>
-                <span className="app__total-card-value">
-                  {formatCurrency(grandTotals.totalReturns)}
-                </span>
-              </div>
-            </div>
-          ) : null}
+        <div className="app__header-top">
+          <div>
+            <p className="app__eyebrow">Personal investment tracker</p>
+            <h1>Forecast multiple accounts with clarity.</h1>
+            <p className="app__subtitle">
+              Model each investment separately, tune recurring contributions, and
+              compare growth over time.
+            </p>
+          </div>
+          <GoalModeToggle
+            isGoalMode={goalState.isGoalMode}
+            onToggle={handleToggleGoalMode}
+            disabled={!hasAccounts}
+          />
         </div>
-        { hasAccounts ? <div className="app__actions">
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={handleResetAccounts}
-          >
-            Reset defaults
-          </button>
-          <button
-            className="button button--primary"
-            type="button"
-            onClick={handleAddAccount}
-          >
-            + Add account
-          </button>
-        </div> : null}
+        {hasAccounts ? (
+          <div className="app__totals" aria-live="polite">
+            <div
+              className="app__total-card app__total-card--grand"
+              aria-label="Grand total"
+            >
+              <span className="app__total-card-label">Grand total</span>
+              <span className="app__total-card-value">
+                {formatCurrency(grandTotals.finalBalance)}
+              </span>
+            </div>
+            <div
+              className="app__total-card"
+              aria-label="Total contributions"
+            >
+              <span className="app__total-card-label">
+                Total contributions
+              </span>
+              <span className="app__total-card-value">
+                {formatCurrency(grandTotals.totalContributions)}
+              </span>
+            </div>
+            <div className="app__total-card" aria-label="Total returns">
+              <span className="app__total-card-label">Total returns</span>
+              <span className="app__total-card-value">
+                {formatCurrency(grandTotals.totalReturns)}
+              </span>
+            </div>
+          </div>
+        ) : null}
+        {goalState.isGoalMode && hasAccounts && (
+          <GoalProgressBar
+            currentBalance={grandTotals.finalBalance}
+            targetBalance={goalState.targetBalance}
+          />
+        )}
+        {hasAccounts ? (
+          <div className="app__actions">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={handleResetAccounts}
+            >
+              Reset defaults
+            </button>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={handleAddAccount}
+            >
+              + Add account
+            </button>
+          </div>
+        ) : null}
       </header>
 
       {!storageAvailable && (
@@ -271,6 +351,23 @@ function App() {
             device.
           </span>
         </div>
+      )}
+
+      {goalState.isGoalMode && (
+        <section className="goal-section" aria-label="Goal calculator">
+          <GoalInputPanel
+            goalState={goalState}
+            onUpdate={handleGoalStateUpdate}
+            calculationResult={goalCalculationResult}
+            hasAccounts={hasAccounts}
+          />
+          {allocations.length > 0 && (
+            <AllocationSuggestions
+              allocations={allocations}
+              frequency={goalState.contributionFrequency}
+            />
+          )}
+        </section>
       )}
 
       {hasAccounts ? (
