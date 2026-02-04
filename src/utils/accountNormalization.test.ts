@@ -10,6 +10,7 @@ const baseAccount: AccountInput = {
   compoundingFrequency: 'monthly',
   termYears: 1,
   contributionTiming: 'end-of-month',
+  accountType: 'non-registered',
   contribution: {
     amount: 100,
     frequency: 'monthly',
@@ -54,4 +55,68 @@ describe('normalizeAccount', () => {
     expect(account.contributionTiming).toBe('end-of-quarter')
   })
 
+  it('defaults to non-registered when accountType is missing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const accountWithoutType = { ...baseAccount } as Partial<AccountInput>
+    delete (accountWithoutType as Record<string, unknown>).accountType
+    const { account } = normalizeAccount({
+      account: accountWithoutType as AccountInput,
+    })
+
+    expect(account.accountType).toBe('non-registered')
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Missing or invalid account type. Defaulting to non-registered.',
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('defaults to non-registered when accountType is invalid', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { account } = normalizeAccount({
+      account: {
+        ...baseAccount,
+        accountType: 'invalid-type' as AccountInput['accountType'],
+      },
+    })
+
+    expect(account.accountType).toBe('non-registered')
+    expect(warnSpy).toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('preserves valid accountType', () => {
+    const { account } = normalizeAccount({
+      account: {
+        ...baseAccount,
+        accountType: 'tfsa',
+      },
+    })
+
+    expect(account.accountType).toBe('tfsa')
+  })
+
+  it('forces isLockedIn to true for LIRA accounts', () => {
+    const { account } = normalizeAccount({
+      account: {
+        ...baseAccount,
+        accountType: 'lira',
+        isLockedIn: false,
+      },
+    })
+
+    expect(account.accountType).toBe('lira')
+    expect(account.isLockedIn).toBe(true)
+  })
+
+  it('preserves isLockedIn for non-LIRA accounts', () => {
+    const { account } = normalizeAccount({
+      account: {
+        ...baseAccount,
+        accountType: 'tfsa',
+        isLockedIn: false,
+      },
+    })
+
+    expect(account.isLockedIn).toBe(false)
+  })
 })

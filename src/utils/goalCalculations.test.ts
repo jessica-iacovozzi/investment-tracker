@@ -372,6 +372,139 @@ describe('calculateAllocation', () => {
   })
 })
 
+describe('calculateAllocation with contribution room', () => {
+  it('caps suggested contribution at available room for TFSA', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 10000,
+        accountType: 'tfsa',
+        contributionRoom: 5000,
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 1000,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+      termYears: 10,
+    })
+    const tfsaAllocation = result.find((a) => a.accountId === '1')
+    expect(tfsaAllocation?.availableContributionRoom).toBeDefined()
+    expect(tfsaAllocation?.suggestedContribution).toBeLessThanOrEqual(
+      tfsaAllocation?.availableContributionRoom ?? Infinity
+    )
+  })
+
+  it('sets contributionRoomExceeded when suggestion exceeds room', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 10000,
+        accountType: 'tfsa',
+        contributionRoom: 100,
+        customAnnualRoomIncrease: 0,
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 500,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+      termYears: 1,
+    })
+    const tfsaAllocation = result.find((a) => a.accountId === '1')
+    expect(tfsaAllocation?.contributionRoomExceeded).toBe(true)
+  })
+
+  it('redistributes excess to accounts with remaining room', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 10000,
+        accountType: 'tfsa',
+        contributionRoom: 100,
+        customAnnualRoomIncrease: 0,
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'Non-registered',
+        principal: 10000,
+        accountType: 'non-registered',
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 1000,
+      strategy: 'equal',
+      targetFrequency: 'monthly',
+      termYears: 1,
+    })
+    const tfsaAllocation = result.find((a) => a.accountId === '1')
+    const nonRegAllocation = result.find((a) => a.accountId === '2')
+    
+    expect(tfsaAllocation?.contributionRoomExceeded).toBe(true)
+    expect(nonRegAllocation?.availableContributionRoom).toBeUndefined()
+    expect(nonRegAllocation?.suggestedContribution).toBeGreaterThan(500)
+  })
+
+  it('does not limit non-registered accounts', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'Non-registered',
+        principal: 10000,
+        accountType: 'non-registered',
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 10000,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+      termYears: 10,
+    })
+    expect(result[0].availableContributionRoom).toBeUndefined()
+    expect(result[0].contributionRoomExceeded).toBeFalsy()
+  })
+
+  it('handles highest-return strategy with contribution room limits', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'High Return TFSA',
+        principal: 10000,
+        annualRatePercent: 10,
+        accountType: 'tfsa',
+        contributionRoom: 100,
+        customAnnualRoomIncrease: 0,
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'Lower Return',
+        principal: 10000,
+        annualRatePercent: 5,
+        accountType: 'non-registered',
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 1000,
+      strategy: 'highest-return',
+      targetFrequency: 'monthly',
+      termYears: 1,
+    })
+    const tfsaAllocation = result.find((a) => a.accountId === '1')
+    const nonRegAllocation = result.find((a) => a.accountId === '2')
+    
+    expect(tfsaAllocation?.contributionRoomExceeded).toBe(true)
+    expect(nonRegAllocation?.suggestedContribution).toBeGreaterThan(0)
+  })
+})
+
 describe('formatTermFromMonths', () => {
   it('formats months only', () => {
     expect(formatTermFromMonths(6)).toBe('6 months')

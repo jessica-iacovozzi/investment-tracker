@@ -5,6 +5,11 @@ import {
   isValidCompoundingFrequency,
   isValidContributionTiming,
 } from '../constants/compounding'
+import {
+  DEFAULT_ACCOUNT_TYPE,
+  isLockedAccountType,
+  isValidAccountType,
+} from '../constants/accountTypes'
 import { normalizeTimingForFrequency } from './contributionTiming'
 
 type NormalizeAccountInput = {
@@ -40,11 +45,29 @@ export const normalizeAccount = ({
     console.warn('Invalid compounding or timing settings found. Using defaults.')
   }
 
+  const normalizedAccountType =
+    account.accountType && isValidAccountType(account.accountType)
+      ? account.accountType
+      : DEFAULT_ACCOUNT_TYPE
+
+  const normalizedIsLockedIn = isLockedAccountType(normalizedAccountType)
+    ? true
+    : account.isLockedIn
+
+  if (
+    import.meta.env.DEV &&
+    (!account.accountType || account.accountType !== normalizedAccountType)
+  ) {
+    console.warn('Missing or invalid account type. Defaulting to non-registered.')
+  }
+
   return {
     account: {
       ...account,
       compoundingFrequency: normalizedFrequency,
       contributionTiming: normalizedTiming,
+      accountType: normalizedAccountType,
+      isLockedIn: normalizedIsLockedIn,
     },
   }
 }

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AccountInput } from '../types/investment'
+import type { InflationState } from '../types/inflation'
 import AccountCard from './AccountCard'
 
 const buildAccount = ({
@@ -25,12 +26,18 @@ const buildAccount = ({
   },
 })
 
+const defaultInflationState: InflationState = {
+  isEnabled: false,
+  annualRatePercent: 2.5,
+}
+
 describe('AccountCard', () => {
   it('extends end month when term increases from the previous max', () => {
     const handleUpdate = vi.fn()
     const { rerender } = render(
       <AccountCard
         account={buildAccount({ termYears: 10, endMonth: 120 })}
+        inflationState={defaultInflationState}
         onUpdate={handleUpdate}
         onDelete={vi.fn()}
       />,
@@ -58,6 +65,7 @@ describe('AccountCard', () => {
     rerender(
       <AccountCard
         account={buildAccount({ termYears: 11, endMonth: 132 })}
+        inflationState={defaultInflationState}
         onUpdate={handleUpdate}
         onDelete={vi.fn()}
       />,
