@@ -19,6 +19,7 @@ const createMockAccount = (
   compoundingFrequency: 'monthly',
   termYears: 10,
   contributionTiming: 'end-of-month',
+  accountType: 'non-registered',
   ...overrides,
 })
 
