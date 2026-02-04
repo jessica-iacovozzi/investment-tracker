@@ -158,18 +158,16 @@ describe('AccountForm', () => {
       expect(within(container).queryByLabelText(/Custom annual room/)).toBeNull()
     })
 
-    it('hides locked-in toggle for LIRA accounts', () => {
-      const { container, rerender } = render(
-        <AccountForm account={buildAccount({ accountType: 'lira' })} onUpdate={vi.fn()} />,
-      )
-
-      expect(within(container).queryByLabelText(/Locked-in account/)).toBeNull()
-
-      rerender(
-        <AccountForm account={buildAccount({ accountType: 'tfsa' })} onUpdate={vi.fn()} />,
-      )
-
-      expect(within(container).queryByLabelText(/Locked-in account/)).toBeTruthy()
+    it('does not render locked-in checkbox for any account type', () => {
+      const accountTypes = ['tfsa', 'rrsp', 'fhsa', 'lira', 'non-registered'] as const
+      
+      accountTypes.forEach((accountType) => {
+        const { container, unmount } = render(
+          <AccountForm account={buildAccount({ accountType })} onUpdate={vi.fn()} />,
+        )
+        expect(within(container).queryByLabelText(/Locked-in account/)).toBeNull()
+        unmount()
+      })
     })
 
     it('calls onUpdate with new account type when changed', () => {

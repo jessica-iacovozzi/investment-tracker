@@ -51,8 +51,6 @@ export const normalizeAccount = ({
       : DEFAULT_ACCOUNT_TYPE
 
   const normalizedIsLockedIn = isLockedAccountType(normalizedAccountType)
-    ? true
-    : account.isLockedIn
 
   if (
     import.meta.env.DEV &&
