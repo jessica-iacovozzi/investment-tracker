@@ -1,3 +1,10 @@
+export type AccountType =
+  | 'tfsa'
+  | 'rrsp'
+  | 'fhsa'
+  | 'lira'
+  | 'non-registered'
+
 export type ContributionFrequency =
   | 'bi-weekly'
   | 'monthly'
@@ -42,6 +49,11 @@ export type AccountInput = {
   contributionTiming: ContributionTiming
   contribution?: ContributionSchedule
   isLockedIn?: boolean
+  accountType: AccountType
+  contributionRoom?: number
+  annualIncomeForRrsp?: number
+  fhsaLifetimeContributions?: number
+  customAnnualRoomIncrease?: number
 }
 
 export type AccountUpdatePayload = {
@@ -54,12 +66,17 @@ export type ProjectionPoint = {
   year: number
   balance: number
   totalContributions: number
+  realBalance?: number
+  realTotalContributions?: number
 }
 
 export type ProjectionTotals = {
   totalContributions: number
   totalReturns: number
   finalBalance: number
+  realTotalContributions?: number
+  realTotalReturns?: number
+  realFinalBalance?: number
 }
 
 export type AccountProjection = {

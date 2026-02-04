@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isLocalStorageAvailable, loadGoalState, saveGoalState, clearGoalState } from './storage'
+import {
+  isLocalStorageAvailable,
+  loadGoalState,
+  saveGoalState,
+  clearGoalState,
+  loadInflationState,
+  saveInflationState,
+  clearInflationState,
+} from './storage'
 import { DEFAULT_GOAL_STATE } from '../types/goal'
 import type { GoalState } from '../types/goal'
+import { DEFAULT_INFLATION_STATE } from '../types/inflation'
+import type { InflationState } from '../types/inflation'
 
 const buildMockStorage = () => {
   const store = new Map<string, string>()
@@ -161,6 +171,123 @@ describe('clearGoalState', () => {
     clearGoalState({ storageAvailable: true })
 
     expect(mockStorage.getItem('investment-tracker-goal')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('loadInflationState', () => {
+  it('returns default state when storage unavailable', () => {
+    const result = loadInflationState({ storageAvailable: false })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
+  })
+
+  it('returns default state when no stored value', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns stored inflation state', () => {
+    const mockStorage = buildMockStorage()
+    const storedState: InflationState = {
+      isEnabled: true,
+      annualRatePercent: 3.5,
+    }
+    mockStorage.setItem('investment-tracker-inflation', JSON.stringify(storedState))
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result.isEnabled).toBe(true)
+    expect(result.annualRatePercent).toBe(3.5)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns default state on invalid JSON', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-inflation', 'invalid json')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('merges partial stored state with defaults', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-inflation', JSON.stringify({ isEnabled: true }))
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result.isEnabled).toBe(true)
+    expect(result.annualRatePercent).toBe(DEFAULT_INFLATION_STATE.annualRatePercent)
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('saveInflationState', () => {
+  it('does nothing when storage unavailable', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    saveInflationState({
+      inflationState: { isEnabled: true, annualRatePercent: 3 },
+      storageAvailable: false,
+    })
+
+    expect(mockStorage.getItem('investment-tracker-inflation')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('saves inflation state to localStorage', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const inflationState: InflationState = {
+      isEnabled: true,
+      annualRatePercent: 4.0,
+    }
+    saveInflationState({ inflationState, storageAvailable: true })
+
+    const stored = mockStorage.getItem('investment-tracker-inflation')
+    expect(stored).not.toBeNull()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.isEnabled).toBe(true)
+    expect(parsed.annualRatePercent).toBe(4.0)
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('clearInflationState', () => {
+  it('does nothing when storage unavailable', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-inflation', JSON.stringify(DEFAULT_INFLATION_STATE))
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    clearInflationState({ storageAvailable: false })
+
+    expect(mockStorage.getItem('investment-tracker-inflation')).not.toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('removes inflation state from localStorage', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-inflation', JSON.stringify(DEFAULT_INFLATION_STATE))
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    clearInflationState({ storageAvailable: true })
+
+    expect(mockStorage.getItem('investment-tracker-inflation')).toBeNull()
 
     vi.unstubAllGlobals()
   })

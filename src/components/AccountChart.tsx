@@ -13,6 +13,7 @@ import { formatCompactNumber, formatCurrency, formatNumber } from '../utils/form
 
 type AccountChartProps = {
   data: ProjectionPoint[]
+  inflationEnabled?: boolean
 }
 
 const MAX_YEAR_TICK_SEGMENTS = 6
@@ -40,7 +41,7 @@ const getYearTicks = (points: ProjectionPoint[]) => {
   return ticks
 }
 
-function AccountChart({ data }: AccountChartProps) {
+function AccountChart({ data, inflationEnabled }: AccountChartProps) {
   return (
     <section className="chart-card" aria-label="Projection chart">
       <h3 className="chart-card__title">Growth projection</h3>
@@ -87,6 +88,16 @@ function AccountChart({ data }: AccountChartProps) {
               dot={false}
               name="Total contributions"
             />
+            {inflationEnabled && (
+              <Line
+                type="monotone"
+                dataKey="realBalance"
+                stroke="#4ade80"
+                strokeWidth={2}
+                dot={false}
+                name="Real balance (today's $)"
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>

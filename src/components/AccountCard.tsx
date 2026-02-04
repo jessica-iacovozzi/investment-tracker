@@ -1,7 +1,11 @@
 import { useMemo } from 'react'
 import type { AccountInput, AccountUpdatePayload } from '../types/investment'
+import type { InflationState } from '../types/inflation'
 import { buildProjection } from '../utils/projections'
 import { normalizeTimingForFrequency } from '../utils/contributionTiming'
+import { applyInflationToProjection } from '../utils/inflation'
+import { getContributionRoomResult } from '../utils/contributionRoom'
+import { isTaxAdvantagedAccount } from '../constants/accountTypes'
 import AccountChart from './AccountChart'
 import AccountForm from './AccountForm'
 import AccountSummary from './AccountSummary'
@@ -9,6 +13,7 @@ import AccountSummary from './AccountSummary'
 type AccountCardProps = {
   account: AccountInput
   currentAge?: number
+  inflationState: InflationState
   onUpdate: (payload: AccountUpdatePayload) => void
   onDelete: (id: string) => void
 }
@@ -79,8 +84,25 @@ const normalizeContributionTiming = (
   }
 }
 
-function AccountCard({ account, currentAge, onUpdate, onDelete }: AccountCardProps) {
-  const projection = useMemo(() => buildProjection(account), [account])
+function AccountCard({ account, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {
+  const projection = useMemo(() => {
+    const baseProjection = buildProjection(account)
+    if (inflationState.isEnabled) {
+      return applyInflationToProjection(
+        baseProjection,
+        inflationState.annualRatePercent,
+        account.termYears,
+      )
+    }
+    return baseProjection
+  }, [account, inflationState])
+
+  const contributionRoomResult = useMemo(() => {
+    if (!isTaxAdvantagedAccount(account.accountType)) {
+      return undefined
+    }
+    return getContributionRoomResult(account)
+  }, [account])
 
   const handleUpdate = (payload: AccountUpdatePayload) => {
     const adjustedPayload = adjustContributionRange(account, payload)
@@ -120,8 +142,16 @@ function AccountCard({ account, currentAge, onUpdate, onDelete }: AccountCardPro
           totals={projection.totals}
           currentAge={currentAge}
           termYears={account.termYears}
+          inflationEnabled={inflationState.isEnabled}
+          contributionRoom={account.contributionRoom}
+          accountType={account.accountType}
+          contributionRoomResult={contributionRoomResult}
+          fhsaLifetimeContributions={account.fhsaLifetimeContributions}
         />
-        <AccountChart data={projection.points} />
+        <AccountChart
+          data={projection.points}
+          inflationEnabled={inflationState.isEnabled}
+        />
       </div>
     </section>
   )

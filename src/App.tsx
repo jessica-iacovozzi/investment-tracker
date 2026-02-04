@@ -13,14 +13,25 @@ import {
 import { normalizeAccount } from './utils/accountNormalization'
 import { formatCurrency } from './utils/formatters'
 import { buildProjection } from './utils/projections'
-import { isLocalStorageAvailable, loadGoalState, saveGoalState, clearGoalState } from './utils/storage'
+import {
+  isLocalStorageAvailable,
+  loadGoalState,
+  saveGoalState,
+  clearGoalState,
+  loadInflationState,
+  saveInflationState,
+  clearInflationState,
+} from './utils/storage'
 import {
   calculateRequiredContribution,
   calculateRequiredTerm,
   calculateAllocation,
 } from './utils/goalCalculations'
-import type { AccountInput, AccountUpdatePayload } from './types/investment'
+import type { AccountInput, AccountUpdatePayload, ProjectionTotals } from './types/investment'
 import type { GoalState, GoalCalculationResult } from './types/goal'
+import type { InflationState } from './types/inflation'
+import { applyInflationToTotals } from './utils/inflation'
+import InflationControls from './components/InflationControls'
 import './App.css'
 
 const buildId = () => {
@@ -210,6 +221,9 @@ function App() {
   const [currentAge, setCurrentAge] = useState<number | undefined>(() =>
     loadCurrentAge({ storageAvailable }),
   )
+  const [inflationState, setInflationState] = useState<InflationState>(() =>
+    loadInflationState({ storageAvailable }),
+  )
   const hasAccounts = accounts.length > 0
   const shareUrl =
     typeof window !== 'undefined'
@@ -227,6 +241,10 @@ function App() {
   useEffect(() => {
     saveCurrentAge({ currentAge, storageAvailable })
   }, [currentAge, storageAvailable])
+
+  useEffect(() => {
+    saveInflationState({ inflationState, storageAvailable })
+  }, [inflationState, storageAvailable])
 
   const handleAccountUpdate = (payload: AccountUpdatePayload) => {
     setAccounts((prev) => updateAccount({ accounts: prev, payload }))
@@ -246,9 +264,11 @@ function App() {
     clearAccounts({ storageAvailable })
     clearGoalState({ storageAvailable })
     clearCurrentAge({ storageAvailable })
+    clearInflationState({ storageAvailable })
     setAccounts(normalizeAccounts(seedAccounts()))
     setGoalState(loadGoalState({ storageAvailable: false }))
     setCurrentAge(loadCurrentAge({ storageAvailable: false }))
+    setInflationState(loadInflationState({ storageAvailable: false }))
   }
 
   const handleDeleteAccount = (id: string) => {
@@ -263,27 +283,44 @@ function App() {
     setGoalState((prev) => ({ ...prev, isGoalMode: !prev.isGoalMode }))
   }
 
-  const grandTotals = useMemo(
-    () =>
-      accounts.reduce(
-        (totals, account) => {
-          const projectionTotals = buildProjection(account).totals
+  const handleInflationStateUpdate = (updates: Partial<InflationState>) => {
+    setInflationState((prev) => ({ ...prev, ...updates }))
+  }
 
-          return {
-            totalContributions:
-              totals.totalContributions + projectionTotals.totalContributions,
-            totalReturns: totals.totalReturns + projectionTotals.totalReturns,
-            finalBalance: totals.finalBalance + projectionTotals.finalBalance,
-          }
-        },
-        {
-          totalContributions: 0,
-          totalReturns: 0,
-          finalBalance: 0,
-        },
-      ),
+  const maxTermYears = useMemo(
+    () => Math.max(...accounts.map((a) => a.termYears), 0),
     [accounts],
   )
+
+  const grandTotals: ProjectionTotals = useMemo(() => {
+    const nominalTotals: ProjectionTotals = accounts.reduce(
+      (totals, account) => {
+        const projectionTotals = buildProjection(account).totals
+
+        return {
+          totalContributions:
+            totals.totalContributions + projectionTotals.totalContributions,
+          totalReturns: totals.totalReturns + projectionTotals.totalReturns,
+          finalBalance: totals.finalBalance + projectionTotals.finalBalance,
+        }
+      },
+      {
+        totalContributions: 0,
+        totalReturns: 0,
+        finalBalance: 0,
+      },
+    )
+
+    if (inflationState.isEnabled && maxTermYears > 0) {
+      return applyInflationToTotals(
+        nominalTotals,
+        inflationState.annualRatePercent,
+        maxTermYears,
+      )
+    }
+
+    return nominalTotals
+  }, [accounts, inflationState, maxTermYears])
 
   const goalCalculationResult: GoalCalculationResult | null = useMemo(() => {
     if (!goalState.isGoalMode || !hasAccounts) {
@@ -343,9 +380,13 @@ function App() {
           </div>
           <div className="app__header-controls">
             <CurrentAgeInput currentAge={currentAge} onChange={setCurrentAge} />
+            <InflationControls
+              inflationState={inflationState}
+              onUpdate={handleInflationStateUpdate}
+            />
             <GoalModeToggle
-            isGoalMode={goalState.isGoalMode}
-            onToggle={handleToggleGoalMode}
+              isGoalMode={goalState.isGoalMode}
+              onToggle={handleToggleGoalMode}
               disabled={!hasAccounts}
             />
           </div>
@@ -356,9 +397,15 @@ function App() {
               className="app__total-card app__total-card--grand"
               aria-label="Grand total"
             >
-              <span className="app__total-card-label">Grand total</span>
+              <span className="app__total-card-label">
+                {inflationState.isEnabled ? "Grand total (today's $)" : 'Grand total'}
+              </span>
               <span className="app__total-card-value">
-                {formatCurrency(grandTotals.finalBalance)}
+                {formatCurrency(
+                  inflationState.isEnabled && grandTotals.realFinalBalance !== undefined
+                    ? grandTotals.realFinalBalance
+                    : grandTotals.finalBalance
+                )}
               </span>
             </div>
             <div
@@ -366,16 +413,26 @@ function App() {
               aria-label="Total contributions"
             >
               <span className="app__total-card-label">
-                Total contributions
+                {inflationState.isEnabled ? "Total contributions (today's $)" : 'Total contributions'}
               </span>
               <span className="app__total-card-value">
-                {formatCurrency(grandTotals.totalContributions)}
+                {formatCurrency(
+                  inflationState.isEnabled && grandTotals.realTotalContributions !== undefined
+                    ? grandTotals.realTotalContributions
+                    : grandTotals.totalContributions
+                )}
               </span>
             </div>
             <div className="app__total-card" aria-label="Total returns">
-              <span className="app__total-card-label">Total returns</span>
+              <span className="app__total-card-label">
+                {inflationState.isEnabled ? "Total returns (today's $)" : 'Total returns'}
+              </span>
               <span className="app__total-card-value">
-                {formatCurrency(grandTotals.totalReturns)}
+                {formatCurrency(
+                  inflationState.isEnabled && grandTotals.realTotalReturns !== undefined
+                    ? grandTotals.realTotalReturns
+                    : grandTotals.totalReturns
+                )}
               </span>
             </div>
           </div>
@@ -440,6 +497,7 @@ function App() {
               key={account.id}
               account={account}
               currentAge={currentAge}
+              inflationState={inflationState}
               onUpdate={handleAccountUpdate}
               onDelete={handleDeleteAccount}
             />
