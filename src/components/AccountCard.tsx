@@ -171,6 +171,7 @@ function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdat
           aggregatedSummary={aggregatedSummary}
           thisAccountContributions={thisAccountContributions}
           sameTypeAccountCount={sameTypeAccountCount}
+          allAccounts={allAccounts}
         />
         <AccountChart
           data={projection.points}

@@ -10,6 +10,7 @@ const baseAccount: AccountInput = {
   compoundingFrequency: 'monthly',
   termYears: 1,
   contributionTiming: 'end-of-month',
+  accountType: 'non-registered',
   contribution: {
     amount: 100,
     frequency: 'monthly',

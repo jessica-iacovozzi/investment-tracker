@@ -1164,3 +1164,123 @@
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* Enhanced Shared Field Indicators */
+.field-hint--shared {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: rgb(99, 102, 241);
+  transition: all 0.2s ease-in-out;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.field-hint--shared:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+}
+
+.field-hint__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.field-hint--shared:hover .field-hint__icon {
+  opacity: 1;
+}
+
+.field-hint__text {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Shared Fields Breakdown */
+.shared-fields-breakdown {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(99, 102, 241, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 10px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.shared-fields-breakdown__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgb(99, 102, 241);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.shared-fields-breakdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.shared-fields-breakdown__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+}
+
+.shared-fields-breakdown__label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.shared-fields-breakdown__value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Animation for smooth appearance */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced focus styles for accessibility */
+.field-hint--shared:focus-within {
+  outline: 2px solid rgb(99, 102, 241);
+  outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 720px) {
+  .field-hint--shared {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .shared-fields-breakdown {
+    padding: 0.75rem;
+  }
+  
+  .shared-fields-breakdown__title {
+    font-size: 0.8rem;
+  }
+}

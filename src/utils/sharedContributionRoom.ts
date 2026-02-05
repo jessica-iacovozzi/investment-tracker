@@ -23,6 +23,7 @@ export const getAccountsByType = (
 /**
  * Get the most recently updated account of a specific type.
  * Uses array order as a proxy for recency (last updated account appears later in array).
+ * This is the source of truth for shared field values across accounts of the same type.
  */
 export const getMostRecentAccountByType = (
   accounts: AccountInput[],
@@ -169,6 +170,13 @@ export const getSharedAvailableRoom = (
   }) : {}
 
   const baseAccount = { ...maxTermAccount, ...seedValues }
+  
+  // For tax-advantaged accounts, if no contribution room is defined, return 0
+  // Non-registered accounts have unlimited room (-1)
+  if (accountType !== 'non-registered' && (baseAccount.contributionRoom === undefined || baseAccount.contributionRoom === null)) {
+    return 0
+  }
+  
   const availableRoom = calculateAvailableRoom(baseAccount)
   return availableRoom === Infinity ? -1 : availableRoom
 }
@@ -212,19 +220,19 @@ export const getAggregatedContributionSummary = (
   accountType: AccountType,
 ): AccountTypeContributionSummary => {
   const sameTypeAccounts = getAccountsByType(accounts, accountType)
-  const sharedContributionRoom = getSharedContributionRoom(accounts, accountType)
+  const sharedContributionRoom = getSharedContributionRoom(sameTypeAccounts, accountType)
   const totalProjectedContributions = getCombinedProjectedContributions(
-    accounts,
+    sameTypeAccounts,
     accountType,
   )
-  const availableRoom = getSharedAvailableRoom(accounts, accountType)
+  const availableRoom = getSharedAvailableRoom(sameTypeAccounts, accountType)
   const remainingRoom =
     availableRoom === -1
       ? -1
       : Math.round((availableRoom - totalProjectedContributions) * 100) / 100
 
   const overContributionDetails = getSharedOverContributionDetails(
-    accounts,
+    sameTypeAccounts,
     accountType,
     availableRoom,
     totalProjectedContributions,
@@ -253,6 +261,12 @@ const isSyncedField = (
 /**
  * Sync contribution room fields across all accounts of the same type.
  * When a synced field changes on one account, propagate to all accounts of the same type.
+ * 
+ * Sync Strategy:
+ * 1. Identify which fields changed and are configured for syncing
+ * 2. Validate and sanitize values (e.g., prevent negative contribution room)
+ * 3. Apply changes to all other accounts of the same type
+ * 4. Preserve the original account's values (don't sync back to self)
  */
 export const syncContributionRoomFields = (
   accounts: AccountInput[],
@@ -276,7 +290,7 @@ export const syncContributionRoomFields = (
     return accounts
   }
 
-  const syncValues: Record<string, unknown> = {}
+  const syncValues: Partial<AccountInput> = {}
   for (const field of changedSyncFields) {
     const value = payload.changes[field]
     if (value !== undefined) {
@@ -290,7 +304,8 @@ export const syncContributionRoomFields = (
       } else if (field === 'customAnnualRoomIncrease' && typeof value === 'number' && value < 0) {
         syncValues[field] = 0
       } else {
-        syncValues[field] = value
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        syncValues[field] = value as any
       }
     }
   }
@@ -299,6 +314,65 @@ export const syncContributionRoomFields = (
     if (account.accountType !== accountType || account.id === payload.id) {
       return account
     }
-    return { ...account, ...syncValues as Partial<AccountInput> }
+    return { ...account, ...syncValues }
   })
+}
+
+/**
+ * Field configuration for shared indicators.
+ */
+const SHARED_FIELD_CONFIG: {
+  [K in keyof AccountInput]?: { label: string; description: string }
+} = {
+  contributionRoom: {
+    label: 'Contribution room',
+    description: 'Available contribution room is shared across all accounts of this type',
+  },
+  customAnnualRoomIncrease: {
+    label: 'Custom annual room increase',
+    description: 'Custom annual increase amount is shared across all TFSA accounts',
+  },
+  annualIncomeForRrsp: {
+    label: 'Annual income',
+    description: 'Annual income for RRSP calculation is shared across all RRSP accounts',
+  },
+  fhsaLifetimeContributions: {
+    label: 'Lifetime contributions',
+    description: 'Lifetime FHSA contributions are tracked across all FHSA accounts',
+  },
+}
+
+/**
+ * Get the display label for a shared field.
+ */
+export const getSharedFieldLabel = (field: keyof AccountInput): string => {
+  return SHARED_FIELD_CONFIG[field]?.label || ''
+}
+
+/**
+ * Get the description for a shared field.
+ */
+export const getSharedFieldDescription = (field: keyof AccountInput): string => {
+  return SHARED_FIELD_CONFIG[field]?.description || ''
+}
+
+/**
+ * Generate the complete shared indicator message for a field.
+ */
+export const getFieldSharedMessage = (
+  field: keyof AccountInput,
+  accountType: AccountType,
+  accountCount: number,
+): string | null => {
+  const config = SHARED_FIELD_CONFIG[field]
+  if (!config || !config.label) {
+    return null
+  }
+
+  const accountTypeLabel = accountType.toUpperCase()
+  if (accountCount <= 1) {
+    return null
+  }
+
+  return `Shared across ${accountCount} ${accountTypeLabel} accounts`
 }

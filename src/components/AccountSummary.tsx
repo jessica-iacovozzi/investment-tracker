@@ -4,6 +4,7 @@ import { getFinalAgeLabel } from '../utils/ageLabel'
 import { formatCurrency } from '../utils/formatters'
 import { isTaxAdvantagedAccount, FHSA_LIFETIME_LIMIT } from '../constants/accountTypes'
 import ContributionRoomWarning from './ContributionRoomWarning'
+import SharedFieldsBreakdown from './SharedFieldsBreakdown'
 
 type AccountSummaryProps = {
   totals: ProjectionTotals
@@ -16,6 +17,7 @@ type AccountSummaryProps = {
   aggregatedSummary?: AccountTypeContributionSummary
   thisAccountContributions?: number
   sameTypeAccountCount?: number
+  allAccounts?: import('../types/investment').AccountInput[]
 }
 
 function AccountSummary({
@@ -29,6 +31,7 @@ function AccountSummary({
   aggregatedSummary,
   thisAccountContributions,
   sameTypeAccountCount,
+  allAccounts = [],
 }: AccountSummaryProps) {
   const finalValueLabel = getFinalAgeLabel({ currentAge, termYears })
   const suffix = inflationEnabled ? " (today's $)" : ''
@@ -168,6 +171,14 @@ function AccountSummary({
               overContributionDetails={aggregatedSummary?.overContributionDetails ?? contributionRoomResult.overContributionDetails}
               accountType={accountType}
               accountCount={sameTypeAccountCount}
+            />
+          )}
+          
+          {accountType && allAccounts.length > 1 && (
+            <SharedFieldsBreakdown
+              accountType={accountType}
+              accounts={allAccounts.filter(acc => acc.accountType === accountType)}
+              className="summary-card__shared-fields"
             />
           )}
         </>

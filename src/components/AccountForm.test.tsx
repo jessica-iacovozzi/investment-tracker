@@ -3,30 +3,38 @@ import { fireEvent, render, within } from '@testing-library/react'
 import type { AccountInput, AccountType, ContributionFrequency } from '../types/investment'
 import AccountForm from './AccountForm'
 
-const buildAccount = ({
-  frequency = 'monthly',
-  timing = 'end-of-month',
-  accountType = 'non-registered',
-}: {
+type BuildAccountOverrides = Partial<AccountInput> & {
   frequency?: ContributionFrequency
   timing?: AccountInput['contributionTiming']
   accountType?: AccountType
-} = {}): AccountInput => ({
-  id: 'account-1',
-  name: 'Test Account',
-  principal: 10000,
-  annualRatePercent: 5,
-  compoundingFrequency: 'monthly',
-  termYears: 10,
-  contributionTiming: timing,
-  accountType,
-  contribution: {
-    amount: 200,
-    frequency,
-    startMonth: 1,
-    endMonth: 120,
-  },
-})
+}
+
+const buildAccount = (overrides: BuildAccountOverrides = {}): AccountInput => {
+  const {
+    frequency = 'monthly',
+    timing = 'end-of-month',
+    accountType = 'non-registered',
+    ...accountOverrides
+  } = overrides
+
+  return {
+    id: 'account-1',
+    name: 'Test Account',
+    principal: 10000,
+    annualRatePercent: 5,
+    compoundingFrequency: 'monthly',
+    termYears: 10,
+    contributionTiming: timing,
+    accountType,
+    contribution: {
+      amount: 200,
+      frequency: frequency as ContributionFrequency,
+      startMonth: 1,
+      endMonth: 120,
+    },
+    ...accountOverrides,
+  }
+}
 
 describe('AccountForm', () => {
   it('filters timing options based on frequency', () => {
@@ -156,6 +164,101 @@ describe('AccountForm', () => {
       )
 
       expect(within(container).queryByLabelText(/Custom annual room/)).toBeNull()
+    })
+
+    it('updates shared room fields when account values change', () => {
+      const initialAccount = buildAccount({
+        accountType: 'tfsa',
+        contributionRoom: 12000,
+        customAnnualRoomIncrease: 7000,
+      })
+      const { container, rerender } = render(
+        <AccountForm account={initialAccount} onUpdate={vi.fn()} />,
+      )
+      const contributionInput = within(container).getByLabelText(/Contribution room/) as HTMLInputElement
+      const customRoomInput = within(container).getByLabelText(/Custom annual room/) as HTMLInputElement
+
+      expect(contributionInput.value).toBe('12000')
+      expect(customRoomInput.value).toBe('7000')
+
+      rerender(
+        <AccountForm
+          account={{
+            ...initialAccount,
+            contributionRoom: 15000,
+            customAnnualRoomIncrease: 7500,
+          }}
+          onUpdate={vi.fn()}
+        />,
+      )
+
+      expect(contributionInput.value).toBe('15000')
+      expect(customRoomInput.value).toBe('7500')
+    })
+
+    it('sends zero values for synced fields', () => {
+      const handleUpdate = vi.fn()
+      const { container, rerender } = render(
+        <AccountForm
+          account={buildAccount({
+            accountType: 'tfsa',
+            contributionRoom: 12000,
+            customAnnualRoomIncrease: 7000,
+          })}
+          onUpdate={handleUpdate}
+        />,
+      )
+
+      fireEvent.change(within(container).getByLabelText(/Contribution room/), {
+        target: { value: '0' },
+      })
+      fireEvent.change(within(container).getByLabelText(/Custom annual room/), {
+        target: { value: '0' },
+      })
+
+      fireEvent.change(within(container).getByLabelText(/Contribution room/), {
+        target: { value: '' },
+      })
+      fireEvent.change(within(container).getByLabelText(/Custom annual room/), {
+        target: { value: '' },
+      })
+
+      expect(handleUpdate).toHaveBeenCalledWith({
+        id: 'account-1',
+        changes: { contributionRoom: 0 },
+      })
+      expect(handleUpdate).toHaveBeenCalledWith({
+        id: 'account-1',
+        changes: { customAnnualRoomIncrease: 0 },
+      })
+
+      rerender(
+        <AccountForm
+          account={buildAccount({
+            accountType: 'rrsp',
+            annualIncomeForRrsp: 90000,
+          })}
+          onUpdate={handleUpdate}
+        />,
+      )
+
+      fireEvent.change(within(container).getByLabelText(/Annual income/), {
+        target: { value: '0' },
+      })
+
+      expect(handleUpdate).toHaveBeenCalledWith({
+        id: 'account-1',
+        changes: { annualIncomeForRrsp: 0 },
+      })
+
+      fireEvent.change(within(container).getByLabelText(/Annual income/), {
+        target: { value: '' },
+      })
+
+      expect(handleUpdate).toHaveBeenCalledWith({
+        id: 'account-1',
+        changes: { annualIncomeForRrsp: 0 },
+      })
     })
 
     it('does not render locked-in checkbox for any account type', () => {

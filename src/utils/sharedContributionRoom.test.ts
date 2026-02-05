@@ -7,6 +7,10 @@ import {
   getSharedAvailableRoom,
   getAggregatedContributionSummary,
   syncContributionRoomFields,
+  getSharedFieldLabel,
+  getSharedFieldDescription,
+  getFieldSharedMessage,
+  getSharedFieldSeedValues,
 } from './sharedContributionRoom'
 
 const buildAccount = (
@@ -307,5 +311,141 @@ describe('syncContributionRoomFields', () => {
     const result = syncContributionRoomFields(accounts, payload)
 
     expect(result).toEqual(accounts)
+  })
+})
+
+describe('getSharedFieldLabel', () => {
+  it('returns correct label for contributionRoom', () => {
+    expect(getSharedFieldLabel('contributionRoom')).toBe('Contribution room')
+  })
+
+  it('returns correct label for customAnnualRoomIncrease', () => {
+    expect(getSharedFieldLabel('customAnnualRoomIncrease')).toBe('Custom annual room increase')
+  })
+
+  it('returns correct label for annualIncomeForRrsp', () => {
+    expect(getSharedFieldLabel('annualIncomeForRrsp')).toBe('Annual income')
+  })
+
+  it('returns correct label for fhsaLifetimeContributions', () => {
+    expect(getSharedFieldLabel('fhsaLifetimeContributions')).toBe('Lifetime contributions')
+  })
+
+  it('returns empty string for non-shared fields', () => {
+    expect(getSharedFieldLabel('name')).toBe('')
+    expect(getSharedFieldLabel('principal')).toBe('')
+  })
+})
+
+describe('getSharedFieldDescription', () => {
+  it('returns correct description for contributionRoom', () => {
+    expect(getSharedFieldDescription('contributionRoom')).toBe('Available contribution room is shared across all accounts of this type')
+  })
+
+  it('returns correct description for customAnnualRoomIncrease', () => {
+    expect(getSharedFieldDescription('customAnnualRoomIncrease')).toBe('Custom annual increase amount is shared across all TFSA accounts')
+  })
+
+  it('returns correct description for annualIncomeForRrsp', () => {
+    expect(getSharedFieldDescription('annualIncomeForRrsp')).toBe('Annual income for RRSP calculation is shared across all RRSP accounts')
+  })
+
+  it('returns correct description for fhsaLifetimeContributions', () => {
+    expect(getSharedFieldDescription('fhsaLifetimeContributions')).toBe('Lifetime FHSA contributions are tracked across all FHSA accounts')
+  })
+
+  it('returns empty string for non-shared fields', () => {
+    expect(getSharedFieldDescription('name')).toBe('')
+    expect(getSharedFieldDescription('principal')).toBe('')
+  })
+})
+
+describe('getFieldSharedMessage', () => {
+  it('returns null for non-shared fields', () => {
+    expect(getFieldSharedMessage('name', 'tfsa', 2)).toBeNull()
+    expect(getFieldSharedMessage('principal', 'tfsa', 2)).toBeNull()
+  })
+
+  it('returns null when account count is 1', () => {
+    expect(getFieldSharedMessage('contributionRoom', 'tfsa', 1)).toBeNull()
+  })
+
+  it('returns null when account count is 0', () => {
+    expect(getFieldSharedMessage('contributionRoom', 'tfsa', 0)).toBeNull()
+  })
+
+  it('returns correct message for contributionRoom with multiple accounts', () => {
+    expect(getFieldSharedMessage('contributionRoom', 'tfsa', 2)).toBe('Shared across 2 TFSA accounts')
+    expect(getFieldSharedMessage('contributionRoom', 'rrsp', 3)).toBe('Shared across 3 RRSP accounts')
+  })
+
+  it('returns correct message for customAnnualRoomIncrease with multiple accounts', () => {
+    expect(getFieldSharedMessage('customAnnualRoomIncrease', 'tfsa', 2)).toBe('Shared across 2 TFSA accounts')
+  })
+
+  it('returns correct message for annualIncomeForRrsp with multiple accounts', () => {
+    expect(getFieldSharedMessage('annualIncomeForRrsp', 'rrsp', 2)).toBe('Shared across 2 RRSP accounts')
+  })
+
+  it('returns correct message for fhsaLifetimeContributions with multiple accounts', () => {
+    expect(getFieldSharedMessage('fhsaLifetimeContributions', 'fhsa', 2)).toBe('Shared across 2 FHSA accounts')
+  })
+})
+
+describe('getSharedFieldSeedValues', () => {
+  it('returns empty object when no accounts have defined synced fields', () => {
+    const accounts = [
+      buildAccount({ id: '1', accountType: 'tfsa' }),
+      buildAccount({ id: '2', accountType: 'tfsa' }),
+    ]
+    const result = getSharedFieldSeedValues(accounts, 'tfsa')
+    expect(result).toEqual({})
+  })
+
+  it('handles race condition scenario with multiple field updates', () => {
+    const accounts = [
+      buildAccount({ id: '1', accountType: 'tfsa', contributionRoom: 50000 }),
+      buildAccount({ id: '2', accountType: 'tfsa', customAnnualRoomIncrease: 7000 }),
+    ]
+    const result = getSharedFieldSeedValues(accounts, 'tfsa')
+    expect(result).toEqual({ customAnnualRoomIncrease: 7000 })
+  })
+})
+
+describe('Edge Cases', () => {
+  it('handles inconsistent contribution room values across accounts', () => {
+    const accounts = [
+      buildAccount({ id: '1', accountType: 'tfsa', contributionRoom: 50000 }),
+      buildAccount({ id: '2', accountType: 'tfsa', contributionRoom: 30000 }),
+    ]
+    const result = getSharedContributionRoom(accounts, 'tfsa')
+    expect(result).toBe(30000) // Most recent account
+  })
+
+  it('handles undefined values in aggregated summary calculations', () => {
+    const accounts = [
+      buildAccount({ id: '1', accountType: 'tfsa' }),
+      buildAccount({ id: '2', accountType: 'tfsa' }),
+    ]
+    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    expect(result.sharedContributionRoom).toBe(0)
+    expect(result.totalProjectedContributions).toBe(0)
+    expect(result.remainingRoom).toBe(0)
+  })
+
+  it('performs well with large number of accounts', () => {
+    const accounts = Array.from({ length: 50 }, (_, i) =>
+      buildAccount({
+        id: `${i}`,
+        accountType: 'tfsa',
+        contributionRoom: 50000,
+        contribution: { amount: 500, frequency: 'monthly', startMonth: 1, endMonth: 12 },
+      })
+    )
+    const start = performance.now()
+    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const end = performance.now()
+    expect(end - start).toBeLessThan(100) // Should complete in less than 100ms
+    expect(result.accountCount).toBe(50)
   })
 })

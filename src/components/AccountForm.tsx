@@ -25,6 +25,7 @@ import {
   isLockedAccountType,
 } from '../constants/accountTypes'
 import { getSharedFieldSeedValues } from '../utils/sharedContributionRoom'
+import SharedFieldIndicator from './SharedFieldIndicator'
 
 const DEFAULT_CONTRIBUTION = {
   amount: 200,
@@ -119,6 +120,7 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
   const [numericInputs, setNumericInputs] = useState<NumericInputs>(() =>
     buildNumericInputs(account),
   )
+  const [editingField, setEditingField] = useState<keyof NumericInputs | null>(null)
   const hasContribution = Boolean(account.contribution)
   const totalMonths = Math.max(Math.round(account.termYears * 12), 1)
   const contributionFrequency = account.contribution?.frequency ?? 'monthly'
@@ -127,6 +129,38 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
     frequency: contributionFrequency,
   })
   const timingOptions = getValidTimingsForFrequency(contributionFrequency)
+
+  const handleSharedFieldFocus = (
+    field: keyof NumericInputs,
+    accountValue: number | undefined,
+  ) => {
+    setEditingField(field)
+    setNumericInputs((prev) => ({
+      ...prev,
+      [field]: formatNumberInput(accountValue),
+    }))
+  }
+
+  const handleSharedFieldBlur = (field: keyof NumericInputs) => {
+    setEditingField((prev) => (prev === field ? null : prev))
+  }
+
+  const contributionRoomValue =
+    editingField === 'contributionRoom'
+      ? numericInputs.contributionRoom
+      : formatNumberInput(account.contributionRoom)
+  const annualIncomeValue =
+    editingField === 'annualIncomeForRrsp'
+      ? numericInputs.annualIncomeForRrsp
+      : formatNumberInput(account.annualIncomeForRrsp)
+  const fhsaLifetimeValue =
+    editingField === 'fhsaLifetimeContributions'
+      ? numericInputs.fhsaLifetimeContributions
+      : formatNumberInput(account.fhsaLifetimeContributions)
+  const customAnnualRoomValue =
+    editingField === 'customAnnualRoomIncrease'
+      ? numericInputs.customAnnualRoomIncrease
+      : formatNumberInput(account.customAnnualRoomIncrease)
 
   const handleNameChange = (value: string) => {
     onUpdate(buildPayload(account.id, { name: value }))
@@ -202,39 +236,60 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
   }
 
   const handleAnnualIncomeChange = (value: string) => {
-    handleNumericInputChange({
+    handleSharedNumericInputChange({
       field: 'annualIncomeForRrsp',
       value,
       onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { annualIncomeForRrsp: nextValue || undefined })),
+        onUpdate(buildPayload(account.id, { annualIncomeForRrsp: nextValue })),
     })
   }
 
   const handleFhsaLifetimeChange = (value: string) => {
-    handleNumericInputChange({
+    handleSharedNumericInputChange({
       field: 'fhsaLifetimeContributions',
       value,
       onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { fhsaLifetimeContributions: nextValue || undefined })),
+        onUpdate(buildPayload(account.id, { fhsaLifetimeContributions: nextValue })),
     })
   }
 
   const handleCustomAnnualRoomChange = (value: string) => {
-    handleNumericInputChange({
+    handleSharedNumericInputChange({
       field: 'customAnnualRoomIncrease',
       value,
       onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { customAnnualRoomIncrease: nextValue || undefined })),
+        onUpdate(buildPayload(account.id, { customAnnualRoomIncrease: nextValue })),
     })
   }
 
   const handleContributionRoomChange = (value: string) => {
-    handleNumericInputChange({
+    handleSharedNumericInputChange({
       field: 'contributionRoom',
       value,
       onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { contributionRoom: nextValue || undefined })),
+        onUpdate(buildPayload(account.id, { contributionRoom: nextValue })),
     })
+  }
+
+  const handleSharedNumericInputChange = ({
+    field,
+    value,
+    onUpdateField,
+  }: {
+    field: keyof NumericInputs
+    value: string
+    onUpdateField: (nextValue: number | undefined) => void
+  }) => {
+    setNumericInputs((prev) => ({ ...prev, [field]: value }))
+    if (value === '') {
+      onUpdateField(0)
+      return
+    }
+    const parsed = Number(value)
+    if (Number.isNaN(parsed)) {
+      return
+    }
+    onUpdateField(parsed)
   }
 
   const handleNumericInputChange = ({
@@ -491,14 +546,21 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
           min="0"
           step="100"
           placeholder="Optional"
-          value={numericInputs.contributionRoom}
+          value={contributionRoomValue}
           onChange={(event) => handleContributionRoomChange(event.target.value)}
+          onFocus={() =>
+            handleSharedFieldFocus('contributionRoom', account.contributionRoom)
+          }
+          onBlur={() => handleSharedFieldBlur('contributionRoom')}
+          aria-describedby={sameTypeAccountCount && sameTypeAccountCount > 1 ? `${account.id}-contribution-room-shared` : undefined}
         />
-        {sameTypeAccountCount && sameTypeAccountCount > 1 && (
-          <p className="field-hint">
-            Shared across {sameTypeAccountCount} {account.accountType.toUpperCase()} accounts
-          </p>
-        )}
+        <SharedFieldIndicator
+          field="contributionRoom"
+          accountType={account.accountType}
+          accountCount={sameTypeAccountCount || 1}
+          className="field-hint--contribution-room"
+          inputId={`${account.id}-contribution-room`}
+        />
       </div>
       )}
 
@@ -531,8 +593,20 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
             min="0"
             step="1000"
             placeholder="Optional"
-            value={numericInputs.annualIncomeForRrsp}
+            value={annualIncomeValue}
             onChange={(event) => handleAnnualIncomeChange(event.target.value)}
+            onFocus={() =>
+              handleSharedFieldFocus('annualIncomeForRrsp', account.annualIncomeForRrsp)
+            }
+            onBlur={() => handleSharedFieldBlur('annualIncomeForRrsp')}
+            aria-describedby={sameTypeAccountCount && sameTypeAccountCount > 1 ? `${account.id}-annual-income-shared` : undefined}
+          />
+          <SharedFieldIndicator
+            field="annualIncomeForRrsp"
+            accountType={account.accountType}
+            accountCount={sameTypeAccountCount || 1}
+            className="field-hint--annual-income"
+            inputId={`${account.id}-annual-income`}
           />
         </div>
       )}
@@ -567,8 +641,23 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
             max="40000"
             step="100"
             placeholder="Optional"
-            value={numericInputs.fhsaLifetimeContributions}
+            value={fhsaLifetimeValue}
             onChange={(event) => handleFhsaLifetimeChange(event.target.value)}
+            onFocus={() =>
+              handleSharedFieldFocus(
+                'fhsaLifetimeContributions',
+                account.fhsaLifetimeContributions,
+              )
+            }
+            onBlur={() => handleSharedFieldBlur('fhsaLifetimeContributions')}
+            aria-describedby={sameTypeAccountCount && sameTypeAccountCount > 1 ? `${account.id}-fhsa-lifetime-shared` : undefined}
+          />
+          <SharedFieldIndicator
+            field="fhsaLifetimeContributions"
+            accountType={account.accountType}
+            accountCount={sameTypeAccountCount || 1}
+            className="field-hint--fhsa-lifetime"
+            inputId={`${account.id}-fhsa-lifetime`}
           />
         </div>
       )}
@@ -602,8 +691,23 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
             min="0"
             step="500"
             placeholder="Default: $7,000"
-            value={numericInputs.customAnnualRoomIncrease}
+            value={customAnnualRoomValue}
             onChange={(event) => handleCustomAnnualRoomChange(event.target.value)}
+            onFocus={() =>
+              handleSharedFieldFocus(
+                'customAnnualRoomIncrease',
+                account.customAnnualRoomIncrease,
+              )
+            }
+            onBlur={() => handleSharedFieldBlur('customAnnualRoomIncrease')}
+            aria-describedby={sameTypeAccountCount && sameTypeAccountCount > 1 ? `${account.id}-custom-annual-room-shared` : undefined}
+          />
+          <SharedFieldIndicator
+            field="customAnnualRoomIncrease"
+            accountType={account.accountType}
+            accountCount={sameTypeAccountCount || 1}
+            className="field-hint--custom-annual-room"
+            inputId={`${account.id}-custom-annual-room`}
           />
         </div>
       )}
