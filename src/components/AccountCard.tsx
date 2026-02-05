@@ -1,17 +1,19 @@
 import { useMemo } from 'react'
-import type { AccountInput, AccountUpdatePayload } from '../types/investment'
+import type { AccountInput, AccountUpdatePayload, AccountTypeContributionSummary } from '../types/investment'
 import type { InflationState } from '../types/inflation'
 import { buildProjection } from '../utils/projections'
 import { normalizeTimingForFrequency } from '../utils/contributionTiming'
 import { applyInflationToProjection } from '../utils/inflation'
-import { getContributionRoomResult } from '../utils/contributionRoom'
+import { getContributionRoomResult, calculateTotalProjectedContributions } from '../utils/contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
+import { getAggregatedContributionSummary, getAccountsByType } from '../utils/sharedContributionRoom'
 import AccountChart from './AccountChart'
 import AccountForm from './AccountForm'
 import AccountSummary from './AccountSummary'
 
 type AccountCardProps = {
   account: AccountInput
+  allAccounts: AccountInput[]
   currentAge?: number
   inflationState: InflationState
   onUpdate: (payload: AccountUpdatePayload) => void
@@ -84,7 +86,7 @@ const normalizeContributionTiming = (
   }
 }
 
-function AccountCard({ account, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {
+function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {
   const projection = useMemo(() => {
     const baseProjection = buildProjection(account)
     if (inflationState.isEnabled) {
@@ -103,6 +105,21 @@ function AccountCard({ account, currentAge, inflationState, onUpdate, onDelete }
     }
     return getContributionRoomResult(account)
   }, [account])
+
+  const aggregatedSummary: AccountTypeContributionSummary | undefined = useMemo(() => {
+    if (!isTaxAdvantagedAccount(account.accountType)) {
+      return undefined
+    }
+    return getAggregatedContributionSummary(allAccounts, account.accountType)
+  }, [allAccounts, account.accountType])
+
+  const thisAccountContributions = useMemo(() => {
+    return calculateTotalProjectedContributions(account)
+  }, [account])
+
+  const sameTypeAccountCount = useMemo(() => {
+    return getAccountsByType(allAccounts, account.accountType).length
+  }, [allAccounts, account.accountType])
 
   const handleUpdate = (payload: AccountUpdatePayload) => {
     const adjustedPayload = adjustContributionRange(account, payload)
@@ -137,16 +154,23 @@ function AccountCard({ account, currentAge, inflationState, onUpdate, onDelete }
       </div>
 
       <div className="account-card__content">
-        <AccountForm account={account} onUpdate={handleUpdate} />
+        <AccountForm
+          account={account}
+          onUpdate={handleUpdate}
+          sameTypeAccountCount={sameTypeAccountCount}
+          allAccounts={allAccounts}
+        />
         <AccountSummary
           totals={projection.totals}
           currentAge={currentAge}
           termYears={account.termYears}
           inflationEnabled={inflationState.isEnabled}
-          contributionRoom={account.contributionRoom}
           accountType={account.accountType}
           contributionRoomResult={contributionRoomResult}
           fhsaLifetimeContributions={account.fhsaLifetimeContributions}
+          aggregatedSummary={aggregatedSummary}
+          thisAccountContributions={thisAccountContributions}
+          sameTypeAccountCount={sameTypeAccountCount}
         />
         <AccountChart
           data={projection.points}

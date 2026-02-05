@@ -24,6 +24,7 @@ import {
   isTaxAdvantagedAccount,
   isLockedAccountType,
 } from '../constants/accountTypes'
+import { getSharedFieldSeedValues } from '../utils/sharedContributionRoom'
 
 const DEFAULT_CONTRIBUTION = {
   amount: 200,
@@ -35,6 +36,8 @@ const DEFAULT_CONTRIBUTION = {
 type AccountFormProps = {
   account: AccountInput
   onUpdate: (payload: AccountUpdatePayload) => void
+  sameTypeAccountCount?: number
+  allAccounts?: AccountInput[]
 }
 
 type NumericInputs = {
@@ -112,7 +115,7 @@ const FREQUENCY_OPTIONS: ContributionFrequency[] = [
 ]
 
 const COMPOUNDING_OPTIONS: CompoundingFrequency[] = COMPOUNDING_FREQUENCIES
-function AccountForm({ account, onUpdate }: AccountFormProps) {
+function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = [] }: AccountFormProps) {
   const [numericInputs, setNumericInputs] = useState<NumericInputs>(() =>
     buildNumericInputs(account),
   )
@@ -166,6 +169,33 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
     if (newAccountType !== 'tfsa') {
       changes.customAnnualRoomIncrease = undefined
       setNumericInputs((prev) => ({ ...prev, customAnnualRoomIncrease: '' }))
+    }
+
+    if (isTaxAdvantaged) {
+      const seedValues = getSharedFieldSeedValues(allAccounts, newAccountType, {
+        excludeAccountId: account.id,
+      })
+      Object.assign(changes, seedValues)
+
+      setNumericInputs((prev) => ({
+        ...prev,
+        contributionRoom:
+          seedValues.contributionRoom !== undefined
+            ? formatNumberInput(seedValues.contributionRoom)
+            : prev.contributionRoom,
+        annualIncomeForRrsp:
+          seedValues.annualIncomeForRrsp !== undefined
+            ? formatNumberInput(seedValues.annualIncomeForRrsp)
+            : prev.annualIncomeForRrsp,
+        fhsaLifetimeContributions:
+          seedValues.fhsaLifetimeContributions !== undefined
+            ? formatNumberInput(seedValues.fhsaLifetimeContributions)
+            : prev.fhsaLifetimeContributions,
+        customAnnualRoomIncrease:
+          seedValues.customAnnualRoomIncrease !== undefined
+            ? formatNumberInput(seedValues.customAnnualRoomIncrease)
+            : prev.customAnnualRoomIncrease,
+      }))
     }
 
     onUpdate(buildPayload(account.id, changes))
@@ -464,6 +494,11 @@ function AccountForm({ account, onUpdate }: AccountFormProps) {
           value={numericInputs.contributionRoom}
           onChange={(event) => handleContributionRoomChange(event.target.value)}
         />
+        {sameTypeAccountCount && sameTypeAccountCount > 1 && (
+          <p className="field-hint">
+            Shared across {sameTypeAccountCount} {account.accountType.toUpperCase()} accounts
+          </p>
+        )}
       </div>
       )}
 

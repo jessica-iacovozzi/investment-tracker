@@ -1,4 +1,4 @@
-import type { AccountType, ProjectionTotals } from '../types/investment'
+import type { AccountType, ProjectionTotals, AccountTypeContributionSummary } from '../types/investment'
 import type { ContributionRoomResult } from '../utils/contributionRoom'
 import { getFinalAgeLabel } from '../utils/ageLabel'
 import { formatCurrency } from '../utils/formatters'
@@ -10,10 +10,12 @@ type AccountSummaryProps = {
   currentAge?: number
   termYears: number
   inflationEnabled?: boolean
-  contributionRoom?: number
   accountType?: AccountType
   contributionRoomResult?: ContributionRoomResult
   fhsaLifetimeContributions?: number
+  aggregatedSummary?: AccountTypeContributionSummary
+  thisAccountContributions?: number
+  sameTypeAccountCount?: number
 }
 
 function AccountSummary({
@@ -21,10 +23,12 @@ function AccountSummary({
   currentAge,
   termYears,
   inflationEnabled,
-  contributionRoom,
   accountType,
   contributionRoomResult,
   fhsaLifetimeContributions,
+  aggregatedSummary,
+  thisAccountContributions,
+  sameTypeAccountCount,
 }: AccountSummaryProps) {
   const finalValueLabel = getFinalAgeLabel({ currentAge, termYears })
   const suffix = inflationEnabled ? " (today's $)" : ''
@@ -47,29 +51,63 @@ function AccountSummary({
   const showContributionRoomSection =
     accountType && isTaxAdvantagedAccount(accountType) && contributionRoomResult
 
+  const hasMultipleSameTypeAccounts = (sameTypeAccountCount ?? 0) > 1
+  const accountTypeLabel = accountType?.toUpperCase() ?? ''
+
   const contributionRoomItems = showContributionRoomSection
     ? [
         {
-          label: 'Current contribution room',
-          value: formatCurrency(contributionRoom ?? 0),
+          label: 'Shared contribution room',
+          value: formatCurrency(aggregatedSummary?.sharedContributionRoom ?? 0),
         },
-        ...(contributionRoomResult.availableRoom !== -1
+        ...(aggregatedSummary && aggregatedSummary.remainingRoom !== -1
           ? [
               {
                 label: 'Available room (with annual increases)',
-                value: formatCurrency(contributionRoomResult.availableRoom),
+                value: formatCurrency((aggregatedSummary.remainingRoom ?? 0) + (aggregatedSummary.totalProjectedContributions ?? 0)),
               },
             ]
-          : []),
-        ...(contributionRoomResult.remainingRoom !== -1
+          : contributionRoomResult.availableRoom !== -1
+            ? [
+                {
+                  label: 'Available room (with annual increases)',
+                  value: formatCurrency(contributionRoomResult.availableRoom),
+                },
+              ]
+            : []),
+        ...(hasMultipleSameTypeAccounts && thisAccountContributions !== undefined
           ? [
               {
-                label: 'Remaining room after contributions',
-                value: formatCurrency(contributionRoomResult.remainingRoom),
-                isNegative: contributionRoomResult.remainingRoom < 0,
+                label: 'This account\'s contributions',
+                value: formatCurrency(thisAccountContributions),
               },
             ]
           : []),
+        ...(hasMultipleSameTypeAccounts && aggregatedSummary
+          ? [
+              {
+                label: `All ${accountTypeLabel} contributions`,
+                value: formatCurrency(aggregatedSummary.totalProjectedContributions),
+              },
+            ]
+          : []),
+        ...(aggregatedSummary && aggregatedSummary.remainingRoom !== -1
+          ? [
+              {
+                label: 'Remaining shared room',
+                value: formatCurrency(aggregatedSummary.remainingRoom),
+                isNegative: aggregatedSummary.remainingRoom < 0,
+              },
+            ]
+          : contributionRoomResult.remainingRoom !== -1
+            ? [
+                {
+                  label: 'Remaining room after contributions',
+                  value: formatCurrency(contributionRoomResult.remainingRoom),
+                  isNegative: contributionRoomResult.remainingRoom < 0,
+                },
+              ]
+            : []),
         ...(accountType === 'fhsa'
           ? [
               {
@@ -102,7 +140,14 @@ function AccountSummary({
 
       {showContributionRoomSection && (
         <>
-          <h4 className="summary-card__subtitle">Contribution Room</h4>
+          <h4 className="summary-card__subtitle">
+            Contribution Room
+            {hasMultipleSameTypeAccounts && (
+              <span className="summary-card__shared-indicator">
+                {' '}(shared across {sameTypeAccountCount} {accountTypeLabel} accounts)
+              </span>
+            )}
+          </h4>
           <dl className="summary-card__list">
             {contributionRoomItems.map((item) => (
               <div
@@ -118,10 +163,11 @@ function AccountSummary({
               </div>
             ))}
           </dl>
-          {contributionRoomResult.overContributionDetails.exceedsRoom && (
+          {(aggregatedSummary?.isOverContributing || contributionRoomResult.overContributionDetails.exceedsRoom) && (
             <ContributionRoomWarning
-              overContributionDetails={contributionRoomResult.overContributionDetails}
+              overContributionDetails={aggregatedSummary?.overContributionDetails ?? contributionRoomResult.overContributionDetails}
               accountType={accountType}
+              accountCount={sameTypeAccountCount}
             />
           )}
         </>

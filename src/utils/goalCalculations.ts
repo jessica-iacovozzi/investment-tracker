@@ -6,8 +6,9 @@ import type {
 } from '../types/goal'
 import { getEffectiveMonthlyRate } from './compounding'
 import { buildProjection } from './projections'
-import { calculateAvailableRoom } from './contributionRoom'
+import { calculateAvailableRoom, calculateTotalProjectedContributions } from './contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
+import { getAccountsByType, getSharedAvailableRoom } from './sharedContributionRoom'
 
 const CONTRIBUTION_PERIODS_PER_YEAR: Record<ContributionFrequency, number> = {
   'bi-weekly': 26,
@@ -310,20 +311,36 @@ const convertFromMonthly = (
  * Get the maximum contribution room available for goal allocation.
  * Returns the total available room converted to the target frequency.
  * Returns undefined for non-tax-advantaged accounts (no limit).
+ * When allAccounts is provided, calculates shared room minus other same-type accounts' contributions.
  */
 const getAvailableRoomForAllocation = (
   account: AccountInput,
   termYears: number,
   targetFrequency: ContributionFrequency,
+  allAccounts?: AccountInput[],
 ): number | undefined => {
   if (!isTaxAdvantagedAccount(account.accountType)) {
     return undefined
   }
 
-  const availableRoom = calculateAvailableRoom(account)
+  let availableRoom: number
+  let otherAccountsContributions = 0
+
+  if (allAccounts) {
+    availableRoom = getSharedAvailableRoom(allAccounts, account.accountType)
+    const sameTypeAccounts = getAccountsByType(allAccounts, account.accountType)
+    otherAccountsContributions = sameTypeAccounts
+      .filter((acc) => acc.id !== account.id)
+      .reduce((sum, acc) => sum + calculateTotalProjectedContributions(acc), 0)
+  } else {
+    availableRoom = calculateAvailableRoom(account)
+  }
+
   if (availableRoom === -1) {
     return undefined
   }
+
+  const remainingSharedRoom = Math.max(0, availableRoom - otherAccountsContributions)
 
   const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[targetFrequency]
   const totalPeriods = termYears * periodsPerYear
@@ -332,7 +349,7 @@ const getAvailableRoomForAllocation = (
     return 0
   }
 
-  return Math.round((availableRoom / totalPeriods) * 100) / 100
+  return Math.round((remainingSharedRoom / totalPeriods) * 100) / 100
 }
 
 /**
@@ -398,7 +415,7 @@ export const calculateAllocation = ({
     contributionRoomExceeded = false,
   ): AccountAllocation => {
     const currentContribution = getCurrentContribution(account, targetFrequency)
-    const availableRoom = getAvailableRoomForAllocation(account, termYears, targetFrequency)
+    const availableRoom = getAvailableRoomForAllocation(account, termYears, targetFrequency, accounts)
     
     const additionalContribution = account.isLockedIn
       ? 0

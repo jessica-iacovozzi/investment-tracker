@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, within } from '@testing-library/react'
-import type { OverContributionDetails } from '../utils/contributionRoom'
+import type { OverContributionDetails } from '../types/investment'
 import ContributionRoomWarning from './ContributionRoomWarning'
 
 const buildOverContributionDetails = (

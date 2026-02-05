@@ -11,6 +11,7 @@ import {
   DEFAULT_CONTRIBUTION_TIMING,
 } from './constants/compounding'
 import { normalizeAccount } from './utils/accountNormalization'
+import { syncContributionRoomFields } from './utils/sharedContributionRoom'
 import { formatCurrency } from './utils/formatters'
 import { buildProjection } from './utils/projections'
 import {
@@ -54,6 +55,7 @@ const buildNewAccount = (index: number): AccountInput => {
     compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
     termYears,
     contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
+    accountType: 'non-registered',
     contribution: {
       amount: 250,
       frequency: 'monthly',
@@ -75,6 +77,7 @@ const seedAccounts = (): AccountInput[] =>
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
           termYears: 12,
           contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
+          accountType: 'non-registered',
           contribution: {
             amount: 300,
             frequency: 'monthly',
@@ -90,6 +93,7 @@ const seedAccounts = (): AccountInput[] =>
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
           termYears: 15,
           contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
+          accountType: 'non-registered',
           contribution: {
             amount: 500,
             frequency: 'quarterly',
@@ -247,7 +251,10 @@ function App() {
   }, [inflationState, storageAvailable])
 
   const handleAccountUpdate = (payload: AccountUpdatePayload) => {
-    setAccounts((prev) => updateAccount({ accounts: prev, payload }))
+    setAccounts((prev) => {
+      const updated = updateAccount({ accounts: prev, payload })
+      return syncContributionRoomFields(updated, payload)
+    })
   }
 
   const handleAddAccount = () => {
@@ -496,6 +503,7 @@ function App() {
             <AccountCard
               key={account.id}
               account={account}
+              allAccounts={accounts}
               currentAge={currentAge}
               inflationState={inflationState}
               onUpdate={handleAccountUpdate}

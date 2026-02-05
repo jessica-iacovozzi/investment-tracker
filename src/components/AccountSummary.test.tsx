@@ -1,7 +1,7 @@
 import { describe, expect, it, afterEach } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import AccountSummary from './AccountSummary'
-import type { ProjectionTotals } from '../types/investment'
+import type { ProjectionTotals, AccountTypeContributionSummary } from '../types/investment'
 import type { ContributionRoomResult } from '../utils/contributionRoom'
 
 const totals: ProjectionTotals = {
@@ -31,6 +31,23 @@ const totalsWithInflation: ProjectionTotals = {
   realTotalReturns: 600,
   realFinalBalance: 1500,
 }
+
+const buildAggregatedSummary = (
+  overrides: Partial<AccountTypeContributionSummary> = {},
+): AccountTypeContributionSummary => ({
+  accountType: 'tfsa',
+  sharedContributionRoom: 7000,
+  totalProjectedContributions: 0,
+  remainingRoom: 7000,
+  accountIds: ['1'],
+  accountCount: 1,
+  isOverContributing: false,
+  overContributionDetails: {
+    exceedsRoom: false,
+    excessAmount: 0,
+  },
+  ...overrides,
+})
 
 describe('AccountSummary', () => {
   afterEach(() => {
@@ -131,14 +148,19 @@ describe('AccountSummary', () => {
           totals={totals}
           termYears={10}
           accountType="tfsa"
-          contributionRoom={7000}
+          aggregatedSummary={buildAggregatedSummary({
+            accountType: 'tfsa',
+            sharedContributionRoom: 7000,
+            remainingRoom: 7000,
+          })}
           contributionRoomResult={buildContributionRoomResult()}
         />,
       )
 
       expect(within(container).getByText('Contribution Room')).toBeTruthy()
-      expect(within(container).getByText('Current contribution room')).toBeTruthy()
-      expect(within(container).getByText('$7,000')).toBeTruthy()
+      expect(within(container).getByText('Shared contribution room')).toBeTruthy()
+      // Use getAllByText since there are multiple $7,000 values
+      expect(within(container).getAllByText('$7,000')).toHaveLength(3)
     })
 
     it('shows available and remaining room', () => {
@@ -147,7 +169,12 @@ describe('AccountSummary', () => {
           totals={totals}
           termYears={10}
           accountType="rrsp"
-          contributionRoom={10000}
+          aggregatedSummary={buildAggregatedSummary({
+            accountType: 'rrsp',
+            sharedContributionRoom: 10000,
+            remainingRoom: 13000,
+            totalProjectedContributions: 12000,
+          })}
           contributionRoomResult={buildContributionRoomResult({
             availableRoom: 25000,
             remainingRoom: 13000,
@@ -157,7 +184,7 @@ describe('AccountSummary', () => {
 
       expect(within(container).getByText('Available room (with annual increases)')).toBeTruthy()
       expect(within(container).getByText('$25,000')).toBeTruthy()
-      expect(within(container).getByText('Remaining room after contributions')).toBeTruthy()
+      expect(within(container).getByText('Remaining shared room')).toBeTruthy()
       expect(within(container).getByText('$13,000')).toBeTruthy()
     })
 
@@ -167,7 +194,11 @@ describe('AccountSummary', () => {
           totals={totals}
           termYears={10}
           accountType="fhsa"
-          contributionRoom={8000}
+          aggregatedSummary={buildAggregatedSummary({
+            accountType: 'fhsa',
+            sharedContributionRoom: 8000,
+            remainingRoom: 8000,
+          })}
           contributionRoomResult={buildContributionRoomResult()}
           fhsaLifetimeContributions={16000}
         />,
@@ -183,7 +214,18 @@ describe('AccountSummary', () => {
           totals={totals}
           termYears={10}
           accountType="tfsa"
-          contributionRoom={5000}
+          aggregatedSummary={buildAggregatedSummary({
+            accountType: 'tfsa',
+            sharedContributionRoom: 5000,
+            remainingRoom: -3000,
+            isOverContributing: true,
+            overContributionDetails: {
+              exceedsRoom: true,
+              excessAmount: 3000,
+              yearOfOverContribution: 2,
+              monthOfOverContribution: 6,
+            },
+          })}
           contributionRoomResult={buildContributionRoomResult({
             remainingRoom: -3000,
             overContributionDetails: {
@@ -206,7 +248,16 @@ describe('AccountSummary', () => {
           totals={totals}
           termYears={10}
           accountType="tfsa"
-          contributionRoom={5000}
+          aggregatedSummary={buildAggregatedSummary({
+            accountType: 'tfsa',
+            sharedContributionRoom: 5000,
+            remainingRoom: -3000,
+            isOverContributing: true,
+            overContributionDetails: {
+              exceedsRoom: true,
+              excessAmount: 3000,
+            },
+          })}
           contributionRoomResult={buildContributionRoomResult({
             remainingRoom: -3000,
             overContributionDetails: {

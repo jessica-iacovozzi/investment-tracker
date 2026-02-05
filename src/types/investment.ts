@@ -83,3 +83,22 @@ export type AccountProjection = {
   points: ProjectionPoint[]
   totals: ProjectionTotals
 }
+
+export type OverContributionDetails = {
+  exceedsRoom: boolean
+  excessAmount: number
+  yearOfOverContribution?: number
+  monthOfOverContribution?: number
+  estimatedPenalty?: number
+}
+
+export type AccountTypeContributionSummary = {
+  accountType: AccountType
+  sharedContributionRoom: number
+  totalProjectedContributions: number
+  remainingRoom: number
+  accountIds: string[]
+  accountCount: number
+  isOverContributing: boolean
+  overContributionDetails: OverContributionDetails
+}

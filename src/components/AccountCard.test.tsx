@@ -18,6 +18,7 @@ const buildAccount = ({
   compoundingFrequency: 'monthly',
   termYears,
   contributionTiming: 'end-of-month',
+  accountType: 'non-registered',
   contribution: {
     amount: 200,
     frequency: 'monthly',
@@ -34,9 +35,11 @@ const defaultInflationState: InflationState = {
 describe('AccountCard', () => {
   it('extends end month when term increases from the previous max', () => {
     const handleUpdate = vi.fn()
+    const account = buildAccount({ termYears: 10, endMonth: 120 })
     const { rerender } = render(
       <AccountCard
-        account={buildAccount({ termYears: 10, endMonth: 120 })}
+        account={account}
+        allAccounts={[account]}
         inflationState={defaultInflationState}
         onUpdate={handleUpdate}
         onDelete={vi.fn()}
@@ -62,9 +65,11 @@ describe('AccountCard', () => {
 
     handleUpdate.mockClear()
 
+    const updatedAccount = buildAccount({ termYears: 11, endMonth: 132 })
     rerender(
       <AccountCard
-        account={buildAccount({ termYears: 11, endMonth: 132 })}
+        account={updatedAccount}
+        allAccounts={[updatedAccount]}
         inflationState={defaultInflationState}
         onUpdate={handleUpdate}
         onDelete={vi.fn()}

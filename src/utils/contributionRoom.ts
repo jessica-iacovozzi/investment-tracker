@@ -1,4 +1,8 @@
-import type { AccountInput, ContributionFrequency } from '../types/investment'
+import type {
+  AccountInput,
+  ContributionFrequency,
+  OverContributionDetails,
+} from '../types/investment'
 import {
   ANNUAL_CONTRIBUTION_LIMITS,
   FHSA_LIFETIME_LIMIT,
@@ -13,14 +17,6 @@ const CONTRIBUTION_PERIODS_PER_YEAR: Record<ContributionFrequency, number> = {
   monthly: 12,
   quarterly: 4,
   annually: 1,
-}
-
-export type OverContributionDetails = {
-  exceedsRoom: boolean
-  excessAmount: number
-  yearOfOverContribution?: number
-  monthOfOverContribution?: number
-  estimatedPenalty?: number
 }
 
 export type ContributionRoomResult = {
@@ -89,7 +85,8 @@ export const calculateAvailableRoom = (account: AccountInput): number => {
     return Infinity
   }
 
-  const initialRoom = account.contributionRoom ?? 0
+  // Defensive programming: ensure contributionRoom is a non-negative number
+  const initialRoom = Math.max(0, account.contributionRoom ?? 0)
   const termYears = Math.max(0, Math.floor(account.termYears))
   const annualIncrease = getAnnualRoomIncrease(account)
 

@@ -1,8 +1,9 @@
-import type { OverContributionDetails } from '../utils/contributionRoom'
+import type { OverContributionDetails } from '../types/investment'
 
 type ContributionRoomWarningProps = {
   overContributionDetails: OverContributionDetails
   accountType: string
+  accountCount?: number
 }
 
 const formatCurrency = (amount: number): string =>
@@ -21,6 +22,7 @@ const getMonthName = (month: number): string => {
 function ContributionRoomWarning({
   overContributionDetails,
   accountType,
+  accountCount,
 }: ContributionRoomWarningProps) {
   const {
     exceedsRoom,
@@ -67,7 +69,9 @@ function ContributionRoomWarning({
           Over-contribution warning
         </p>
         <p className="contribution-room-warning__message">
-          Your projected contributions exceed your {accountType.toUpperCase()} contribution room by{' '}
+          {accountCount && accountCount > 1
+            ? `Your combined contributions across ${accountCount} ${accountType.toUpperCase()} accounts exceed your shared contribution room by `
+            : `Your projected contributions exceed your ${accountType.toUpperCase()} contribution room by `}
           <strong>{formatCurrency(excessAmount)}</strong>
           {timingText && ` starting ${timingText}`}.
         </p>
