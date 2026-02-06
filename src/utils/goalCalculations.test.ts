@@ -420,6 +420,32 @@ describe('calculateAllocation with contribution room', () => {
     expect(tfsaAllocation?.contributionRoomExceeded).toBe(true)
   })
 
+  it('caps monthly allocation using annual room limits', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 10000,
+        accountType: 'tfsa',
+        contributionRoom: 5000,
+        customAnnualRoomIncrease: 0,
+        termYears: 2,
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 800,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+      termYears: 2,
+    })
+    const tfsaAllocation = result.find((a) => a.accountId === '1')
+    expect(tfsaAllocation?.availableContributionRoom).toBeCloseTo(416.67, 2)
+    expect(tfsaAllocation?.suggestedContribution).toBeLessThanOrEqual(
+      tfsaAllocation?.availableContributionRoom ?? Infinity,
+    )
+  })
+
   it('redistributes excess to accounts with remaining room', () => {
     const accounts = [
       createMockAccount({

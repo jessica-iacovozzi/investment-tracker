@@ -7,9 +7,10 @@ import type {
 } from '../types/investment'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
 import {
+  getAnnualContributionRoomLimits,
+  getAnnualProjectedContributions,
   calculateTotalProjectedContributions,
   calculateAvailableRoom,
-  getOverContributionBuffer,
 } from './contributionRoom'
 
 /**
@@ -67,6 +68,25 @@ export const getCombinedProjectedContributions = (
     // Return 0 if anything goes wrong with the aggregation
     return 0
   }
+}
+
+const getCombinedAnnualProjectedContributions = (
+  accounts: AccountInput[],
+  termYears: number,
+): number[] => {
+  if (termYears <= 0) {
+    return []
+  }
+
+  const totals = Array.from({ length: termYears }, () => 0)
+  accounts.forEach((account) => {
+    const annualContributions = getAnnualProjectedContributions(account, termYears)
+    annualContributions.forEach((amount, index) => {
+      totals[index] = Math.round((totals[index] + amount) * 100) / 100
+    })
+  })
+
+  return totals
 }
 
 /**
@@ -187,23 +207,51 @@ export const getSharedAvailableRoom = (
 const getSharedOverContributionDetails = (
   accounts: AccountInput[],
   accountType: AccountType,
-  availableRoom: number,
-  totalContributions: number,
 ): OverContributionDetails => {
-  if (!isTaxAdvantagedAccount(accountType) || availableRoom === -1) {
+  if (!isTaxAdvantagedAccount(accountType)) {
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
   const sameTypeAccounts = getAccountsByType(accounts, accountType)
-  const buffer =
-    sameTypeAccounts.length > 0 ? getOverContributionBuffer(sameTypeAccounts[0]) : 0
-  const effectiveRoom = availableRoom + buffer
-
-  if (totalContributions <= effectiveRoom) {
+  if (sameTypeAccounts.length === 0) {
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
-  const excessAmount = Math.round((totalContributions - effectiveRoom) * 100) / 100
+  const maxTermAccount = sameTypeAccounts.reduce((maxAcc, acc) =>
+    acc.termYears > maxAcc.termYears ? acc : maxAcc,
+  )
+  const mostRecentAccount = getMostRecentAccountByType(accounts, accountType)
+  const seedValues = mostRecentAccount
+    ? getSharedFieldSeedValues(accounts, accountType, {
+        excludeAccountId: mostRecentAccount.id,
+      })
+    : {}
+  const baseAccount = { ...maxTermAccount, ...seedValues }
+  const annualRooms = getAnnualContributionRoomLimits(baseAccount, baseAccount.termYears)
+
+  if (annualRooms.length === 0) {
+    return { exceedsRoom: false, excessAmount: 0 }
+  }
+
+  const annualTotals = getCombinedAnnualProjectedContributions(
+    sameTypeAccounts,
+    annualRooms.length,
+  )
+  let cumulativeRoom = 0
+  let cumulativeContributions = 0
+  const overYearIndex = annualTotals.findIndex((amount, index) => {
+    cumulativeRoom += annualRooms[index] ?? 0
+    cumulativeContributions += amount
+    return cumulativeContributions > cumulativeRoom
+  })
+
+  if (overYearIndex === -1) {
+    return { exceedsRoom: false, excessAmount: 0 }
+  }
+
+  const excessAmount = Math.round(
+    (annualTotals[overYearIndex] - (annualRooms[overYearIndex] ?? 0)) * 100,
+  ) / 100
 
   return {
     exceedsRoom: true,
@@ -234,8 +282,6 @@ export const getAggregatedContributionSummary = (
   const overContributionDetails = getSharedOverContributionDetails(
     sameTypeAccounts,
     accountType,
-    availableRoom,
-    totalProjectedContributions,
   )
 
   return {

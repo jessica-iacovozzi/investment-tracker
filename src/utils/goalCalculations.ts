@@ -6,9 +6,9 @@ import type {
 } from '../types/goal'
 import { getEffectiveMonthlyRate } from './compounding'
 import { buildProjection } from './projections'
-import { calculateAvailableRoom, calculateTotalProjectedContributions } from './contributionRoom'
+import { getAnnualContributionRoomLimits, getAnnualProjectedContributions } from './contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
-import { getAccountsByType, getSharedAvailableRoom } from './sharedContributionRoom'
+import { getAccountsByType, getMostRecentAccountByType } from './sharedContributionRoom'
 
 const CONTRIBUTION_PERIODS_PER_YEAR: Record<ContributionFrequency, number> = {
   'bi-weekly': 26,
@@ -308,6 +308,31 @@ const convertFromMonthly = (
 }
 
 /**
+ * Aggregate annual projected contributions across accounts.
+ */
+const getCombinedAnnualProjectedContributions = (
+  accounts: AccountInput[],
+  termYears: number,
+): number[] => {
+  if (termYears <= 0) {
+    return []
+  }
+
+  const totals = Array.from({ length: termYears }, () => 0)
+  accounts.forEach((account) => {
+    const annualContributions = getAnnualProjectedContributions(account, termYears)
+    annualContributions.forEach((amount, index) => {
+      totals[index] = Math.round((totals[index] + amount) * 100) / 100
+    })
+  })
+
+  return totals
+}
+
+const getInitialAnnualRoom = (annualRooms: number[]): number =>
+  annualRooms[0] ?? 0
+
+/**
  * Get the maximum contribution room available for goal allocation.
  * Returns the total available room converted to the target frequency.
  * Returns undefined for non-tax-advantaged accounts (no limit).
@@ -323,33 +348,38 @@ const getAvailableRoomForAllocation = (
     return undefined
   }
 
-  let availableRoom: number
-  let otherAccountsContributions = 0
-
-  if (allAccounts) {
-    availableRoom = getSharedAvailableRoom(allAccounts, account.accountType)
-    const sameTypeAccounts = getAccountsByType(allAccounts, account.accountType)
-    otherAccountsContributions = sameTypeAccounts
-      .filter((acc) => acc.id !== account.id)
-      .reduce((sum, acc) => sum + calculateTotalProjectedContributions(acc), 0)
-  } else {
-    availableRoom = calculateAvailableRoom(account)
-  }
-
-  if (availableRoom === -1) {
-    return undefined
-  }
-
-  const remainingSharedRoom = Math.max(0, availableRoom - otherAccountsContributions)
-
-  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[targetFrequency]
-  const totalPeriods = termYears * periodsPerYear
-  
-  if (totalPeriods <= 0) {
+  if (termYears <= 0) {
     return 0
   }
 
-  return Math.round((remainingSharedRoom / totalPeriods) * 100) / 100
+  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[targetFrequency]
+  if (periodsPerYear <= 0) {
+    return 0
+  }
+
+  if (!allAccounts) {
+    const annualRooms = getAnnualContributionRoomLimits(account, termYears)
+    const initialAnnualRoom = getInitialAnnualRoom(annualRooms)
+    return Math.round((initialAnnualRoom / periodsPerYear) * 100) / 100
+  }
+
+  const sameTypeAccounts = getAccountsByType(allAccounts, account.accountType)
+  const mostRecentAccount = getMostRecentAccountByType(allAccounts, account.accountType)
+  const baseAccount = mostRecentAccount ? { ...mostRecentAccount, termYears } : account
+  const annualRooms = getAnnualContributionRoomLimits(baseAccount, termYears)
+
+  if (annualRooms.length === 0) {
+    return 0
+  }
+
+  const otherAccounts = sameTypeAccounts.filter((acc) => acc.id !== account.id)
+  const otherAnnualTotals = getCombinedAnnualProjectedContributions(otherAccounts, termYears)
+  const remainingAnnualRooms = annualRooms.map((room, index) =>
+    Math.max(0, room - (otherAnnualTotals[index] ?? 0)),
+  )
+  const initialAnnualRoom = getInitialAnnualRoom(remainingAnnualRooms)
+
+  return Math.round((initialAnnualRoom / periodsPerYear) * 100) / 100
 }
 
 /**
@@ -495,7 +525,7 @@ export const calculateAllocation = ({
       const newSuggested = Math.round((allocation.suggestedContribution + additionalAmount) * 100) / 100
       const newAdditional = Math.max(0, Math.round((newSuggested - allocation.currentContribution) * 100) / 100)
       const exceeds = allocation.availableContributionRoom !== undefined && 
-        newSuggested >= allocation.availableContributionRoom
+        newSuggested > allocation.availableContributionRoom
 
       return {
         ...allocation,

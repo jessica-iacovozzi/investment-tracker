@@ -5,6 +5,7 @@ import {
   calculateAvailableRoom,
   calculateRemainingRoom,
   getAnnualRoomIncrease,
+  getAnnualProjectedContributions,
   getOverContributionDetails,
   getContributionRoomResult,
   getRemainingContributionRoomForGoal,
@@ -93,6 +94,34 @@ describe('calculateTotalProjectedContributions', () => {
       },
     })
     expect(calculateTotalProjectedContributions(account)).toBe(3000)
+  })
+})
+
+describe('getAnnualProjectedContributions', () => {
+  it('calculates bi-weekly contributions by year', () => {
+    const account = buildAccount({
+      termYears: 1,
+      contribution: {
+        amount: 200,
+        frequency: 'bi-weekly',
+        startMonth: 1,
+        endMonth: 12,
+      },
+    })
+    expect(getAnnualProjectedContributions(account)).toEqual([5200])
+  })
+
+  it('handles partial-year bi-weekly contributions', () => {
+    const account = buildAccount({
+      termYears: 1,
+      contribution: {
+        amount: 200,
+        frequency: 'bi-weekly',
+        startMonth: 1,
+        endMonth: 6,
+      },
+    })
+    expect(getAnnualProjectedContributions(account)).toEqual([2600])
   })
 })
 
@@ -295,6 +324,41 @@ describe('getOverContributionDetails', () => {
     expect(result.exceedsRoom).toBe(true)
     expect(result.excessAmount).toBeGreaterThan(0)
     expect(result.estimatedPenalty).toBeGreaterThan(0)
+  })
+
+  it('flags over-contribution when annual room is exceeded', () => {
+    const account = buildAccount({
+      accountType: 'tfsa',
+      contributionRoom: 5000,
+      customAnnualRoomIncrease: 0,
+      termYears: 2,
+      contribution: {
+        amount: 600,
+        frequency: 'monthly',
+        startMonth: 1,
+        endMonth: 24,
+      },
+    })
+    const result = getOverContributionDetails(account)
+    expect(result.exceedsRoom).toBe(true)
+    expect(result.yearOfOverContribution).toBe(1)
+  })
+
+  it('allows carry-forward room to cover later contributions', () => {
+    const account = buildAccount({
+      accountType: 'tfsa',
+      contributionRoom: 5000,
+      customAnnualRoomIncrease: 5000,
+      termYears: 2,
+      contribution: {
+        amount: 7000,
+        frequency: 'annually',
+        startMonth: 13,
+        endMonth: 24,
+      },
+    })
+    const result = getOverContributionDetails(account)
+    expect(result.exceedsRoom).toBe(false)
   })
 
   it('applies RRSP buffer before flagging over-contribution', () => {

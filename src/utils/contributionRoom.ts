@@ -19,6 +19,9 @@ const CONTRIBUTION_PERIODS_PER_YEAR: Record<ContributionFrequency, number> = {
   annually: 1,
 }
 
+const getValidatedTermYears = (termYears: number): number =>
+  Math.max(0, Math.floor(termYears))
+
 export type ContributionRoomResult = {
   availableRoom: number
   projectedContributions: number
@@ -43,6 +46,45 @@ export const calculateTotalProjectedContributions = (
   const totalContributions = amount * periodsPerYear * contributionYears
 
   return Math.round(totalContributions * 100) / 100
+}
+
+/**
+ * Calculate projected contributions for each year of the term.
+ */
+export const getAnnualProjectedContributions = (
+  account: AccountInput,
+  termYears = account.termYears,
+): number[] => {
+  const totalYears = getValidatedTermYears(termYears)
+  const annualContributions = Array.from({ length: totalYears }, () => 0)
+
+  if (!account.contribution || totalYears === 0) {
+    return annualContributions
+  }
+
+  const { amount, frequency, startMonth, endMonth } = account.contribution
+  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[frequency]
+  const totalMonths = totalYears * 12
+  const clampedStart = Math.max(1, startMonth)
+  const clampedEnd = Math.min(endMonth, totalMonths)
+
+  if (clampedEnd < clampedStart) {
+    return annualContributions
+  }
+
+  for (let yearIndex = 0; yearIndex < totalYears; yearIndex += 1) {
+    const yearStartMonth = yearIndex * 12 + 1
+    const yearEndMonth = (yearIndex + 1) * 12
+    const overlapStart = Math.max(clampedStart, yearStartMonth)
+    const overlapEnd = Math.min(clampedEnd, yearEndMonth)
+    const overlapMonths = Math.max(0, overlapEnd - overlapStart + 1)
+    if (overlapMonths > 0) {
+      annualContributions[yearIndex] =
+        Math.round(amount * periodsPerYear * (overlapMonths / 12) * 100) / 100
+    }
+  }
+
+  return annualContributions
 }
 
 /**
@@ -74,6 +116,52 @@ export const getAnnualRoomIncrease = (account: AccountInput): number => {
     default:
       return 0
   }
+}
+
+/**
+ * Get yearly contribution room limits for the account term.
+ */
+export const getAnnualContributionRoomLimits = (
+  account: AccountInput,
+  termYears = account.termYears,
+): number[] => {
+  if (!isTaxAdvantagedAccount(account.accountType)) {
+    return []
+  }
+
+  const totalYears = getValidatedTermYears(termYears)
+  if (totalYears === 0) {
+    return []
+  }
+
+  const initialRoom = Math.max(0, account.contributionRoom ?? 0)
+  const annualIncrease = getAnnualRoomIncrease(account)
+  const buffer = getOverContributionBuffer(account)
+  const rooms: number[] = []
+  let remainingLifetime = Math.max(
+    0,
+    FHSA_LIFETIME_LIMIT - (account.fhsaLifetimeContributions ?? 0),
+  )
+
+  for (let yearIndex = 0; yearIndex < totalYears; yearIndex += 1) {
+    let room = yearIndex === 0 ? initialRoom : annualIncrease
+
+    if (account.accountType === 'fhsa') {
+      const cappedAnnual = Math.min(annualIncrease, FHSA_MAX_ANNUAL_WITH_CARRYFORWARD)
+      room = yearIndex === 0
+        ? Math.min(initialRoom, remainingLifetime)
+        : Math.min(cappedAnnual, remainingLifetime)
+      remainingLifetime = Math.max(0, remainingLifetime - room)
+    }
+
+    if (yearIndex === 0) {
+      room += buffer
+    }
+
+    rooms.push(Math.max(0, room))
+  }
+
+  return rooms
 }
 
 /**
@@ -147,18 +235,23 @@ export const getOverContributionDetails = (
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
-  const availableRoom = calculateAvailableRoom(account)
-  const projectedContributions = calculateTotalProjectedContributions(account)
-  const buffer = getOverContributionBuffer(account)
-  const effectiveRoom = availableRoom + buffer
+  const annualRooms = getAnnualContributionRoomLimits(account)
+  const annualContributions = getAnnualProjectedContributions(account, annualRooms.length)
 
-  if (projectedContributions <= effectiveRoom) {
+  let cumulativeRoom = 0
+  let cumulativeContributions = 0
+  const overYearIndex = annualContributions.findIndex((amount, index) => {
+    cumulativeRoom += annualRooms[index] ?? 0
+    cumulativeContributions += amount
+    return cumulativeContributions > cumulativeRoom
+  })
+
+  if (overYearIndex === -1) {
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
-  const excessAmount = Math.round((projectedContributions - effectiveRoom) * 100) / 100
-
-  const overContributionTiming = findOverContributionTiming(account, effectiveRoom)
+  const excessAmount = Math.round((cumulativeContributions - cumulativeRoom) * 100) / 100
+  const overContributionTiming = findOverContributionTimingByYear(account, annualRooms)
   const monthsOfExcess = calculateMonthsOfExcess(account, overContributionTiming)
   const estimatedPenalty = Math.round(excessAmount * 0.01 * monthsOfExcess * 100) / 100
 
@@ -172,34 +265,47 @@ export const getOverContributionDetails = (
 }
 
 /**
- * Find the year and month when over-contribution first occurs.
+ * Find the first month/year when cumulative contribution room is exceeded.
  */
-const findOverContributionTiming = (
+const findOverContributionTimingByYear = (
   account: AccountInput,
-  effectiveRoom: number,
+  annualRooms: number[],
 ): { year: number; month: number } => {
-  if (!account.contribution) {
+  if (!account.contribution || annualRooms.length === 0) {
     return { year: 1, month: 1 }
   }
 
   const { amount, frequency, startMonth, endMonth } = account.contribution
   const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[frequency]
-  const monthsPerPeriod = 12 / periodsPerYear
+  const monthlyContribution = (amount * periodsPerYear) / 12
+  const totalMonths = annualRooms.length * 12
+  const clampedStart = Math.max(1, startMonth)
+  const lastMonth = Math.min(endMonth, totalMonths)
 
-  let cumulativeContributions = 0
-  let currentMonth = startMonth
+  let currentMonth = clampedStart
+  let yearIndex = Math.min(annualRooms.length - 1, Math.floor((currentMonth - 1) / 12))
+  let remainingRoom = annualRooms[yearIndex] ?? 0
 
-  while (currentMonth <= endMonth) {
-    cumulativeContributions += amount
-    if (cumulativeContributions > effectiveRoom) {
+  while (currentMonth <= lastMonth) {
+    const nextYearIndex = Math.min(
+      annualRooms.length - 1,
+      Math.floor((currentMonth - 1) / 12),
+    )
+    if (nextYearIndex !== yearIndex) {
+      yearIndex = nextYearIndex
+      remainingRoom += annualRooms[yearIndex] ?? 0
+    }
+
+    remainingRoom -= monthlyContribution
+    if (remainingRoom < 0) {
       const year = Math.ceil(currentMonth / 12)
-      const monthInYear = ((currentMonth - 1) % 12) + 1
+      const monthInYear = Math.ceil(((currentMonth - 1) % 12) + 1)
       return { year, month: monthInYear }
     }
-    currentMonth += monthsPerPeriod
+    currentMonth += 1
   }
 
-  return { year: Math.ceil(endMonth / 12), month: ((endMonth - 1) % 12) + 1 }
+  return { year: Math.ceil(lastMonth / 12), month: Math.ceil(((lastMonth - 1) % 12) + 1) }
 }
 
 /**

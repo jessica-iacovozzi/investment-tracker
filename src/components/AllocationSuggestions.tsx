@@ -6,6 +6,45 @@ type AllocationSuggestionsProps = {
   frequency: string
 }
 
+const roundToCents = (value: number): number => Math.round(value * 100) / 100
+
+const buildDisplayIncreases = (
+  allocations: AccountAllocation[],
+  totalNetIncrease: number,
+): Record<string, number> => {
+  if (totalNetIncrease <= 0) {
+    return {}
+  }
+
+  const positiveAllocations = allocations.filter(
+    (allocation) =>
+      !allocation.isLockedIn && allocation.suggestedContribution > allocation.currentContribution,
+  )
+  const totalPositive = positiveAllocations.reduce(
+    (sum, allocation) => sum + allocation.suggestedContribution - allocation.currentContribution,
+    0,
+  )
+
+  if (totalPositive <= 0) {
+    return {}
+  }
+
+  const scaleFactor = totalNetIncrease / totalPositive
+  let remainingIncrease = totalNetIncrease
+
+  return positiveAllocations.reduce<Record<string, number>>((acc, allocation, index) => {
+    const rawIncrease = allocation.suggestedContribution - allocation.currentContribution
+    const scaledIncrease =
+      index === positiveAllocations.length - 1
+        ? remainingIncrease
+        : roundToCents(rawIncrease * scaleFactor)
+    const roundedIncrease = roundToCents(scaledIncrease)
+    acc[allocation.accountId] = roundedIncrease
+    remainingIncrease = roundToCents(remainingIncrease - roundedIncrease)
+    return acc
+  }, {})
+}
+
 function AllocationSuggestions({
   allocations,
   frequency,
@@ -14,9 +53,20 @@ function AllocationSuggestions({
     return null
   }
 
-  const totalAdditional = Math.round(
-    allocations.reduce((sum, a) => sum + a.additionalContribution, 0) * 100
-  ) / 100
+  const visibleAllocations = allocations.filter(
+    (allocation) => !allocation.contributionRoomExceeded,
+  )
+
+  if (visibleAllocations.length === 0) {
+    return null
+  }
+
+  const totalNetIncrease = roundToCents(
+    visibleAllocations.reduce(
+      (sum, allocation) => sum + allocation.suggestedContribution - allocation.currentContribution,
+      0,
+    ),
+  )
 
   const FREQUENCY_LABELS: Record<string, string> = {
     'bi-weekly': 'bi-week',
@@ -26,7 +76,8 @@ function AllocationSuggestions({
   }
   const frequencyLabel = FREQUENCY_LABELS[frequency] || frequency
 
-  const hasAdditionalNeeded = totalAdditional > 0
+  const hasAdditionalNeeded = totalNetIncrease > 0
+  const displayIncreases = buildDisplayIncreases(visibleAllocations, totalNetIncrease)
 
   return (
     <div className="allocation-suggestions">
@@ -54,20 +105,22 @@ function AllocationSuggestions({
       </h3>
       <p className="allocation-suggestions__subtitle">
         {hasAdditionalNeeded
-          ? `Increase contributions by ${formatCurrency(totalAdditional)}/${frequencyLabel} total`
+          ? `Increase contributions by ${formatCurrency(totalNetIncrease)}/${frequencyLabel} total`
           : 'Your current contributions meet or exceed the goal requirements'}
       </p>
 
       <ul className="allocation-suggestions__list" role="list">
-        {allocations.map((allocation) => (
-          <li
-            key={allocation.accountId}
-            className={`allocation-suggestions__item ${
-              allocation.additionalContribution === 0
-                ? 'allocation-suggestions__item--on-track'
-                : ''
-            } ${allocation.isLockedIn ? 'allocation-suggestions__item--locked' : ''}`}
-          >
+        {visibleAllocations.map((allocation) => {
+          const displayIncrease = displayIncreases[allocation.accountId] ?? 0
+          const isOnTrack = displayIncrease === 0
+
+          return (
+            <li
+              key={allocation.accountId}
+              className={`allocation-suggestions__item ${
+                isOnTrack ? 'allocation-suggestions__item--on-track' : ''
+              } ${allocation.isLockedIn ? 'allocation-suggestions__item--locked' : ''}`}
+            >
             <div className="allocation-suggestions__account">
               <span className="allocation-suggestions__account-name">
                 {allocation.accountName}
@@ -98,10 +151,10 @@ function AllocationSuggestions({
             <div className="allocation-suggestions__contribution">
               {allocation.isLockedIn ? (
                 <span className="allocation-suggestions__locked">Locked</span>
-              ) : allocation.additionalContribution > 0 ? (
+              ) : displayIncrease > 0 ? (
                 <>
                   <span className="allocation-suggestions__amount allocation-suggestions__amount--additional">
-                    +{formatCurrency(allocation.additionalContribution)}
+                    +{formatCurrency(displayIncrease)}
                   </span>
                   <span className="allocation-suggestions__frequency">
                     /{frequencyLabel}
@@ -112,7 +165,8 @@ function AllocationSuggestions({
               )}
             </div>
           </li>
-        ))}
+          )
+        })}
       </ul>
     </div>
   )

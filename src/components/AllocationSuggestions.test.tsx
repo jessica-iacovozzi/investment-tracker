@@ -24,6 +24,27 @@ const createAllocationsWithAdditional = (): AccountAllocation[] => [
   },
 ]
 
+const createAllocationsWithNetIncrease = (): AccountAllocation[] => [
+  {
+    accountId: '1',
+    accountName: 'Brokerage',
+    suggestedContribution: 600,
+    currentContribution: 300,
+    additionalContribution: 300,
+    currentBalance: 30000,
+    annualRatePercent: 7,
+  },
+  {
+    accountId: '2',
+    accountName: 'Roth IRA',
+    suggestedContribution: 59,
+    currentContribution: 300,
+    additionalContribution: 0,
+    currentBalance: 10000,
+    annualRatePercent: 6,
+  },
+]
+
 const createAllocationsOnTrack = (): AccountAllocation[] => [
   {
     accountId: '1',
@@ -100,6 +121,17 @@ describe('AllocationSuggestions', () => {
     expect(screen.getByText(/Increase contributions by \$600\/month/)).toBeTruthy()
   })
 
+  it('shows net increase in subtitle when decreases exist', () => {
+    render(
+      <AllocationSuggestions
+        allocations={createAllocationsWithNetIncrease()}
+        frequency="monthly"
+      />
+    )
+    expect(screen.getByText(/Increase contributions by \$59\/month/)).toBeTruthy()
+    expect(screen.getByText('+$59')).toBeTruthy()
+  })
+
   it('shows on track message when no additional needed', () => {
     render(
       <AllocationSuggestions
@@ -109,6 +141,40 @@ describe('AllocationSuggestions', () => {
     )
     expect(screen.getByText("You're On Track!")).toBeTruthy()
     expect(screen.getByText(/meet or exceed/)).toBeTruthy()
+  })
+
+  it('hides accounts that exceed contribution room', () => {
+    const allocations: AccountAllocation[] = [
+      {
+        accountId: '1',
+        accountName: 'TFSA',
+        suggestedContribution: 500,
+        currentContribution: 200,
+        additionalContribution: 300,
+        currentBalance: 10000,
+        annualRatePercent: 6,
+        contributionRoomExceeded: true,
+      },
+      {
+        accountId: '2',
+        accountName: 'Brokerage',
+        suggestedContribution: 400,
+        currentContribution: 100,
+        additionalContribution: 300,
+        currentBalance: 8000,
+        annualRatePercent: 5,
+      },
+    ]
+
+    render(
+      <AllocationSuggestions
+        allocations={allocations}
+        frequency="monthly"
+      />
+    )
+
+    expect(screen.queryByText('TFSA')).toBeNull()
+    expect(screen.getByText('Brokerage')).toBeTruthy()
   })
 
   it('formats bi-weekly frequency correctly', () => {
