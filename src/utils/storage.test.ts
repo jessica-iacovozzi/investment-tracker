@@ -7,6 +7,9 @@ import {
   loadInflationState,
   saveInflationState,
   clearInflationState,
+  loadViewPreference,
+  saveViewPreference,
+  clearViewPreference,
 } from './storage'
 import { DEFAULT_GOAL_STATE } from '../types/goal'
 import type { GoalState } from '../types/goal'
@@ -288,6 +291,95 @@ describe('clearInflationState', () => {
     clearInflationState({ storageAvailable: true })
 
     expect(mockStorage.getItem('investment-tracker-inflation')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('loadViewPreference', () => {
+  it('returns cards when storage unavailable', () => {
+    const result = loadViewPreference({ storageAvailable: false })
+    expect(result).toBe('cards')
+  })
+
+  it('returns cards when no stored value', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadViewPreference({ storageAvailable: true })
+    expect(result).toBe('cards')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns stored view preference', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investmentTracker_viewPreference', 'list')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadViewPreference({ storageAvailable: true })
+    expect(result).toBe('list')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns cards for invalid stored value', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investmentTracker_viewPreference', 'table')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadViewPreference({ storageAvailable: true })
+    expect(result).toBe('cards')
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('saveViewPreference', () => {
+  it('does nothing when storage unavailable', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    saveViewPreference({ viewPreference: 'list', storageAvailable: false })
+
+    expect(mockStorage.getItem('investmentTracker_viewPreference')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('saves view preference to localStorage', () => {
+    const mockStorage = buildMockStorage()
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    saveViewPreference({ viewPreference: 'list', storageAvailable: true })
+
+    expect(mockStorage.getItem('investmentTracker_viewPreference')).toBe('list')
+
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('clearViewPreference', () => {
+  it('does nothing when storage unavailable', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investmentTracker_viewPreference', 'list')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    clearViewPreference({ storageAvailable: false })
+
+    expect(mockStorage.getItem('investmentTracker_viewPreference')).not.toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('removes view preference from localStorage', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investmentTracker_viewPreference', 'list')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    clearViewPreference({ storageAvailable: true })
+
+    expect(mockStorage.getItem('investmentTracker_viewPreference')).toBeNull()
 
     vi.unstubAllGlobals()
   })

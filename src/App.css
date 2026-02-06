@@ -140,6 +140,228 @@
   box-shadow: 0 5px 20px rgba(253, 224, 71, 0.3);
 }
 
+/* View Toggle Tabs */
+.view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(15, 15, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.25rem;
+  width: fit-content;
+}
+
+.view-toggle__tab {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view-toggle__tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.view-toggle__tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.view-toggle__tab--active {
+  background: rgba(253, 224, 71, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(253, 224, 71, 0.3);
+}
+
+.view-toggle__tab--active:hover {
+  background: rgba(253, 224, 71, 0.2);
+}
+
+/* Account List View */
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Account List Row */
+.account-list-row {
+  background: var(--surface);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.account-list-row:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.account-list-row--expanded {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(253, 224, 71, 0.15);
+}
+
+.account-list-row__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.account-list-row__header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.account-list-row__header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 18px;
+}
+
+.account-list-row__name {
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-list-row__type-badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.account-list-row__metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.account-list-row__metric:first-of-type {
+  margin-left: auto;
+}
+
+.account-list-row__metric + .account-list-row__metric {
+  margin-left: 0;
+}
+
+.account-list-row__metric-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.account-list-row__metric-value {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.account-list-row__chevron {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.account-list-row--expanded .account-list-row__chevron {
+  color: var(--accent);
+}
+
+/* Expanded detail panel */
+.account-list-row__detail {
+  padding: 0 1.25rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  animation: listRowExpand 0.2s ease-out;
+}
+
+@keyframes listRowExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.account-list-row__detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 0;
+}
+
+.account-list-row__detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.account-list-row__error {
+  padding: 1rem;
+  color: #ef4444;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Responsive: Account List Row */
+@media (max-width: 720px) {
+  .account-list-row__header {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .account-list-row__name {
+    flex-basis: auto;
+  }
+
+  .account-list-row__metric {
+    flex-direction: row;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+
+  .account-list-row__metric:first-of-type {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .account-list-row__detail {
+    padding: 0 0.75rem 0.75rem;
+  }
+}
+
 .account-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import AccountCard from './components/AccountCard'
+import AccountListView from './components/AccountListView'
 import AllocationSuggestions from './components/AllocationSuggestions'
 import CurrentAgeInput from './components/CurrentAgeInput'
 import GoalInputPanel from './components/GoalInputPanel'
 import GoalModeToggle from './components/GoalModeToggle'
 import GoalProgressBar from './components/GoalProgressBar'
 import ShareFooter from './components/ShareFooter'
+import ViewToggle from './components/ViewToggle'
 import {
   DEFAULT_COMPOUNDING_FREQUENCY,
   DEFAULT_CONTRIBUTION_TIMING,
@@ -22,13 +24,16 @@ import {
   loadInflationState,
   saveInflationState,
   clearInflationState,
+  loadViewPreference,
+  saveViewPreference,
+  clearViewPreference,
 } from './utils/storage'
 import {
   calculateRequiredContribution,
   calculateRequiredTerm,
   calculateAllocation,
 } from './utils/goalCalculations'
-import type { AccountInput, AccountUpdatePayload, ProjectionTotals } from './types/investment'
+import type { AccountInput, AccountUpdatePayload, ProjectionTotals, ViewPreference } from './types/investment'
 import type { GoalState, GoalCalculationResult } from './types/goal'
 import type { InflationState } from './types/inflation'
 import { applyInflationToTotals } from './utils/inflation'
@@ -228,6 +233,9 @@ function App() {
   const [inflationState, setInflationState] = useState<InflationState>(() =>
     loadInflationState({ storageAvailable }),
   )
+  const [viewPreference, setViewPreference] = useState<ViewPreference>(() =>
+    loadViewPreference({ storageAvailable }),
+  )
   const hasAccounts = accounts.length > 0
   const shareUrl =
     typeof window !== 'undefined'
@@ -249,6 +257,10 @@ function App() {
   useEffect(() => {
     saveInflationState({ inflationState, storageAvailable })
   }, [inflationState, storageAvailable])
+
+  useEffect(() => {
+    saveViewPreference({ viewPreference, storageAvailable })
+  }, [viewPreference, storageAvailable])
 
   const handleAccountUpdate = (payload: AccountUpdatePayload) => {
     setAccounts((prev) => {
@@ -272,6 +284,7 @@ function App() {
     clearGoalState({ storageAvailable })
     clearCurrentAge({ storageAvailable })
     clearInflationState({ storageAvailable })
+    clearViewPreference({ storageAvailable })
     setAccounts(normalizeAccounts(seedAccounts()))
     setGoalState(loadGoalState({ storageAvailable: false }))
     setCurrentAge(loadCurrentAge({ storageAvailable: false }))
@@ -497,20 +510,35 @@ function App() {
         </section>
       )}
 
+      {hasAccounts && (
+        <ViewToggle activeView={viewPreference} onChange={setViewPreference} />
+      )}
+
       {hasAccounts ? (
-        <section className="account-grid" aria-label="Investment accounts">
-          {accounts.map((account) => (
-            <AccountCard
-              key={account.id}
-              account={account}
-              allAccounts={accounts}
-              currentAge={currentAge}
-              inflationState={inflationState}
-              onUpdate={handleAccountUpdate}
-              onDelete={handleDeleteAccount}
-            />
-          ))}
-        </section>
+        viewPreference === 'cards' ? (
+          <section className="account-grid" aria-label="Investment accounts" role="tabpanel">
+            {accounts.map((account) => (
+              <AccountCard
+                key={account.id}
+                account={account}
+                allAccounts={accounts}
+                currentAge={currentAge}
+                inflationState={inflationState}
+                onUpdate={handleAccountUpdate}
+                onDelete={handleDeleteAccount}
+              />
+            ))}
+          </section>
+        ) : (
+          <AccountListView
+            accounts={accounts}
+            allAccounts={accounts}
+            currentAge={currentAge}
+            inflationState={inflationState}
+            onUpdate={handleAccountUpdate}
+            onDelete={handleDeleteAccount}
+          />
+        )
       ) : (
         <section
           className="empty-state"

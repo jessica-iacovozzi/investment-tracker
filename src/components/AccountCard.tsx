@@ -2,11 +2,11 @@ import { useMemo } from 'react'
 import type { AccountInput, AccountUpdatePayload, AccountTypeContributionSummary } from '../types/investment'
 import type { InflationState } from '../types/inflation'
 import { buildProjection } from '../utils/projections'
-import { normalizeTimingForFrequency } from '../utils/contributionTiming'
 import { applyInflationToProjection } from '../utils/inflation'
 import { getContributionRoomResult, calculateTotalProjectedContributions } from '../utils/contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
 import { getAggregatedContributionSummary, getAccountsByType } from '../utils/sharedContributionRoom'
+import { adjustContributionRange, normalizeContributionTiming } from '../utils/accountCardHelpers'
 import AccountChart from './AccountChart'
 import AccountForm from './AccountForm'
 import AccountSummary from './AccountSummary'
@@ -18,72 +18,6 @@ type AccountCardProps = {
   inflationState: InflationState
   onUpdate: (payload: AccountUpdatePayload) => void
   onDelete: (id: string) => void
-}
-
-const clampMonth = (value: number, maxMonth: number) =>
-  Math.min(Math.max(value, 1), maxMonth)
-
-const adjustContributionRange = (
-  account: AccountInput,
-  payload: AccountUpdatePayload,
-): AccountUpdatePayload => {
-  if (!payload.changes.termYears || !account.contribution) {
-    return payload
-  }
-
-  const previousTotalMonths = Math.max(Math.round(account.termYears * 12), 1)
-  const totalMonths = Math.max(Math.round(payload.changes.termYears * 12), 1)
-  const startMonth = clampMonth(account.contribution.startMonth, totalMonths)
-  const shouldExtendEndMonth =
-    totalMonths > previousTotalMonths &&
-    account.contribution.endMonth === previousTotalMonths
-  const endMonthBase = shouldExtendEndMonth
-    ? totalMonths
-    : account.contribution.endMonth
-  const endMonth = clampMonth(
-    Math.max(endMonthBase, startMonth),
-    totalMonths,
-  )
-
-  return {
-    ...payload,
-    changes: {
-      ...payload.changes,
-      contribution: {
-        ...account.contribution,
-        startMonth,
-        endMonth,
-      },
-    },
-  }
-}
-
-const normalizeContributionTiming = (
-  account: AccountInput,
-  payload: AccountUpdatePayload,
-): AccountUpdatePayload => {
-  const nextContribution = payload.changes.contribution ?? account.contribution
-  if (!nextContribution) {
-    return payload
-  }
-
-  const nextTiming = payload.changes.contributionTiming ?? account.contributionTiming
-  const normalizedTiming = normalizeTimingForFrequency({
-    timing: nextTiming,
-    frequency: nextContribution.frequency,
-  })
-
-  if (normalizedTiming === nextTiming) {
-    return payload
-  }
-
-  return {
-    ...payload,
-    changes: {
-      ...payload.changes,
-      contributionTiming: normalizedTiming,
-    },
-  }
 }
 
 function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {

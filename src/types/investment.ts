@@ -1,3 +1,5 @@
+export type ViewPreference = 'cards' | 'list'
+
 export type AccountType =
   | 'tfsa'
   | 'rrsp'

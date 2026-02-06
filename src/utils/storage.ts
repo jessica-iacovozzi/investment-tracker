@@ -2,9 +2,13 @@ import type { GoalState } from '../types/goal'
 import { DEFAULT_GOAL_STATE } from '../types/goal'
 import type { InflationState } from '../types/inflation'
 import { DEFAULT_INFLATION_STATE } from '../types/inflation'
+import type { ViewPreference } from '../types/investment'
 
 const GOAL_STORAGE_KEY = 'investment-tracker-goal'
 const INFLATION_STORAGE_KEY = 'investment-tracker-inflation'
+const VIEW_PREFERENCE_STORAGE_KEY = 'investmentTracker_viewPreference'
+const DEFAULT_VIEW_PREFERENCE: ViewPreference = 'cards'
+const VALID_VIEW_PREFERENCES: ViewPreference[] = ['cards', 'list']
 
 /**
  * Check if localStorage is available for read/write operations.
@@ -145,4 +149,60 @@ export const clearInflationState = ({
   }
 
   window.localStorage.removeItem(INFLATION_STORAGE_KEY)
+}
+
+/**
+ * Load view preference from localStorage.
+ */
+export const loadViewPreference = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): ViewPreference => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return DEFAULT_VIEW_PREFERENCE
+  }
+
+  const storedValue = window.localStorage.getItem(VIEW_PREFERENCE_STORAGE_KEY)
+  if (!storedValue) {
+    return DEFAULT_VIEW_PREFERENCE
+  }
+
+  if (VALID_VIEW_PREFERENCES.includes(storedValue as ViewPreference)) {
+    return storedValue as ViewPreference
+  }
+
+  return DEFAULT_VIEW_PREFERENCE
+}
+
+/**
+ * Save view preference to localStorage.
+ */
+export const saveViewPreference = ({
+  viewPreference,
+  storageAvailable,
+}: {
+  viewPreference: ViewPreference
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.setItem(VIEW_PREFERENCE_STORAGE_KEY, viewPreference)
+}
+
+/**
+ * Clear view preference from localStorage.
+ */
+export const clearViewPreference = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.removeItem(VIEW_PREFERENCE_STORAGE_KEY)
 }
