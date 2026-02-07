@@ -13,24 +13,26 @@ describe('InflationControls', () => {
     cleanup()
   })
 
-  it('renders toggle button with "Real values off" when disabled', () => {
+  it('renders toggle switch with "Inflation Adjusted" label when disabled', () => {
     render(
       <InflationControls
         inflationState={defaultInflationState}
         onUpdate={() => {}}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Real values off' })).toBeTruthy()
+    expect(screen.getByText('Inflation Adjusted')).toBeTruthy()
+    expect(screen.getByRole('switch')).toBeTruthy()
   })
 
-  it('renders toggle button with "Real values on" when enabled', () => {
+  it('renders toggle switch with "Inflation Adjusted" label when enabled', () => {
     render(
       <InflationControls
         inflationState={{ ...defaultInflationState, isEnabled: true }}
         onUpdate={() => {}}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Real values on' })).toBeTruthy()
+    expect(screen.getByText('Inflation Adjusted')).toBeTruthy()
+    expect(screen.getByRole('switch')).toBeTruthy()
   })
 
   it('calls onUpdate with isEnabled: true when toggle is clicked', () => {
@@ -42,7 +44,7 @@ describe('InflationControls', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Real values off' }))
+    fireEvent.click(screen.getByRole('switch'))
     expect(handleUpdate).toHaveBeenCalledWith({ isEnabled: true })
   })
 
@@ -55,7 +57,7 @@ describe('InflationControls', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Real values on' }))
+    fireEvent.click(screen.getByRole('switch'))
     expect(handleUpdate).toHaveBeenCalledWith({ isEnabled: false })
   })
 
@@ -129,7 +131,7 @@ describe('InflationControls', () => {
     expect(screen.getByText(/Enter a rate between 0% and 15%/)).toBeTruthy()
   })
 
-  it('has correct aria-pressed attribute on toggle', () => {
+  it('has correct aria-checked attribute on toggle', () => {
     const { rerender } = render(
       <InflationControls
         inflationState={defaultInflationState}
@@ -138,7 +140,7 @@ describe('InflationControls', () => {
     )
 
     expect(
-      screen.getByRole('button', { name: 'Real values off' }).getAttribute('aria-pressed'),
+      screen.getByRole('switch').getAttribute('aria-checked'),
     ).toBe('false')
 
     rerender(
@@ -149,7 +151,7 @@ describe('InflationControls', () => {
     )
 
     expect(
-      screen.getByRole('button', { name: 'Real values on' }).getAttribute('aria-pressed'),
+      screen.getByRole('switch').getAttribute('aria-checked'),
     ).toBe('true')
   })
 

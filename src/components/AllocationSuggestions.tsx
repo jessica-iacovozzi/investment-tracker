@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/formatters'
 type AllocationSuggestionsProps = {
   allocations: AccountAllocation[]
   frequency: string
+  isGoalMet: boolean
 }
 
 const roundToCents = (value: number): number => Math.round(value * 100) / 100
@@ -48,6 +49,7 @@ const buildDisplayIncreases = (
 function AllocationSuggestions({
   allocations,
   frequency,
+  isGoalMet,
 }: AllocationSuggestionsProps) {
   if (allocations.length === 0) {
     return null
@@ -76,8 +78,10 @@ function AllocationSuggestions({
   }
   const frequencyLabel = FREQUENCY_LABELS[frequency] || frequency
 
-  const hasAdditionalNeeded = totalNetIncrease > 0
-  const displayIncreases = buildDisplayIncreases(visibleAllocations, totalNetIncrease)
+  const hasAdditionalNeeded = !isGoalMet && totalNetIncrease > 0
+  const displayIncreases = hasAdditionalNeeded
+    ? buildDisplayIncreases(visibleAllocations, totalNetIncrease)
+    : {}
 
   return (
     <div className="allocation-suggestions">
@@ -104,9 +108,11 @@ function AllocationSuggestions({
         </span>
       </h3>
       <p className="allocation-suggestions__subtitle">
-        {hasAdditionalNeeded
-          ? `Increase contributions by ${formatCurrency(totalNetIncrease)}/${frequencyLabel} total`
-          : 'Your current contributions meet or exceed the goal requirements'}
+        {isGoalMet
+          ? 'Your current contributions meet or exceed the goal requirements'
+          : totalNetIncrease > 0
+            ? `Increase contributions by ${formatCurrency(totalNetIncrease)}/${frequencyLabel} total`
+            : 'Your projected balance is close but has not yet reached the goal'}
       </p>
 
       <ul className="allocation-suggestions__list" role="list">

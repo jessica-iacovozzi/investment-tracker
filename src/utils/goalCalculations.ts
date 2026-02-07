@@ -5,6 +5,7 @@ import type {
   GoalCalculationResult,
 } from '../types/goal'
 import { getEffectiveMonthlyRate } from './compounding'
+import { getDefaultTimingForFrequency } from './contributionTiming'
 import { buildProjection } from './projections'
 import { getAnnualContributionRoomLimits, getAnnualProjectedContributions } from './contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
@@ -94,6 +95,134 @@ export const calculateFutureValueWithExistingContributions = (
 }
 
 /**
+ * Find the required total contribution per period using binary search
+ * validated against actual per-account projections. Distributes the
+ * candidate contribution proportionally to principal across non-locked
+ * accounts only. Locked accounts are projected with their existing
+ * contributions as a fixed baseline.
+ */
+const findRequiredContributionByProjection = (
+  accounts: AccountInput[],
+  targetBalance: number,
+  termYears: number,
+  contributionFrequency: ContributionFrequency,
+): number => {
+  const nonLockedAccounts = accounts.filter((acc) => !acc.isLockedIn)
+  const lockedAccounts = accounts.filter((acc) => acc.isLockedIn)
+
+  const lockedProjectedBalance = lockedAccounts.reduce((total, account) => {
+    const projection = buildProjection({ ...account, termYears })
+    return total + projection.totals.finalBalance
+  }, 0)
+
+  if (nonLockedAccounts.length === 0) {
+    return lockedProjectedBalance >= targetBalance ? 0 : Infinity
+  }
+
+  const totalPrincipal = nonLockedAccounts.reduce((sum, acc) => sum + acc.principal, 0)
+  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[contributionFrequency]
+
+  const getProportions = (): number[] => {
+    if (totalPrincipal > 0) {
+      return nonLockedAccounts.map((acc) => acc.principal / totalPrincipal)
+    }
+    const equal = 1 / nonLockedAccounts.length
+    return nonLockedAccounts.map(() => equal)
+  }
+
+  const proportions = getProportions()
+
+  const roomLimits = nonLockedAccounts.map((account) =>
+    getAvailableRoomForAllocation(account, termYears, contributionFrequency, accounts),
+  )
+
+  const distributeWithCaps = (totalContribution: number): number[] => {
+    const allocations = nonLockedAccounts.map(
+      (_, index) => totalContribution * proportions[index],
+    )
+    const capped = new Array<boolean>(allocations.length).fill(false)
+
+    for (let iteration = 0; iteration < nonLockedAccounts.length; iteration++) {
+      let excess = 0
+      let newCaps = false
+
+      for (let i = 0; i < allocations.length; i++) {
+        if (capped[i]) continue
+        const room = roomLimits[i]
+        if (room !== undefined && allocations[i] > room) {
+          excess += allocations[i] - room
+          allocations[i] = room
+          capped[i] = true
+          newCaps = true
+        }
+      }
+
+      if (!newCaps || excess <= 0) break
+
+      const uncappedIndices = allocations
+        .map((_, i) => i)
+        .filter((i) => !capped[i])
+
+      if (uncappedIndices.length === 0) break
+
+      const perUncapped = excess / uncappedIndices.length
+      for (const i of uncappedIndices) {
+        allocations[i] += perUncapped
+      }
+    }
+
+    return allocations
+  }
+
+  const projectWithContribution = (totalContribution: number): number => {
+    const distributed = distributeWithCaps(totalContribution)
+    return nonLockedAccounts.reduce((total, account, index) => {
+      const accountContribution = distributed[index]
+      const modified = {
+        ...account,
+        termYears,
+        contributionTiming: getDefaultTimingForFrequency(contributionFrequency),
+        contribution: {
+          amount: accountContribution,
+          frequency: contributionFrequency,
+          startMonth: 1,
+          endMonth: termYears * 12,
+        },
+      }
+      return total + buildProjection(modified).totals.finalBalance
+    }, 0) + lockedProjectedBalance
+  }
+
+  let low = 0
+  let high = targetBalance / (termYears * periodsPerYear)
+
+  if (projectWithContribution(high) < targetBalance) {
+    high = targetBalance
+  }
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    const mid = (low + high) / 2
+    const projected = projectWithContribution(mid)
+
+    if (Math.abs(projected - targetBalance) < CONVERGENCE_THRESHOLD) {
+      return mid
+    }
+
+    if (projected < targetBalance) {
+      low = mid
+    } else {
+      high = mid
+    }
+
+    if (high - low < 0.001) {
+      return high
+    }
+  }
+
+  return high
+}
+
+/**
  * Calculate the required contribution per period to reach a target balance.
  * Uses an iterative approach to find the contribution amount.
  */
@@ -143,28 +272,12 @@ export const calculateRequiredContribution = ({
     }
   }
 
-  const termMonths = termYears * 12
-  const futureValueWithoutContributions = calculateFutureValueWithoutContributions(
+  const requiredContribution = findRequiredContributionByProjection(
     accounts,
-    termMonths,
+    targetBalance,
+    termYears,
+    contributionFrequency,
   )
-  const amountNeeded = targetBalance - futureValueWithoutContributions
-  const periodsPerYear = CONTRIBUTION_PERIODS_PER_YEAR[contributionFrequency]
-  const weightedRate = getWeightedAverageRate(accounts)
-
-  if (weightedRate === 0) {
-    const totalPeriods = termYears * periodsPerYear
-    const requiredContribution = amountNeeded / totalPeriods
-    return {
-      isReachable: true,
-      requiredContribution: Math.ceil(requiredContribution * 100) / 100,
-    }
-  }
-
-  const periodicRate = weightedRate / 100 / periodsPerYear
-  const totalPeriods = termYears * periodsPerYear
-  const requiredContribution =
-    amountNeeded / ((Math.pow(1 + periodicRate, totalPeriods) - 1) / periodicRate)
 
   if (!isFinite(requiredContribution) || requiredContribution < 0) {
     return {
@@ -477,65 +590,66 @@ export const calculateAllocation = ({
   const applyContributionRoomCaps = (
     allocations: (AccountAllocation & { account: AccountInput })[]
   ): (AccountAllocation & { account: AccountInput })[] => {
-    let excessToRedistribute = 0
-    const cappedAllocations = allocations.map((allocation) => {
-      const availableRoom = allocation.availableContributionRoom
-      if (availableRoom !== undefined && allocation.suggestedContribution > availableRoom) {
-        const excess = allocation.suggestedContribution - availableRoom
-        excessToRedistribute += excess
+    let current = allocations.map((a) => ({ ...a }))
+
+    for (let iteration = 0; iteration < current.length; iteration++) {
+      let excessToRedistribute = 0
+      let newCapsFound = false
+
+      current = current.map((allocation) => {
+        if (allocation.contributionRoomExceeded) return allocation
+        const availableRoom = allocation.availableContributionRoom
+        if (availableRoom !== undefined && allocation.suggestedContribution > availableRoom) {
+          const excess = allocation.suggestedContribution - availableRoom
+          excessToRedistribute += excess
+          newCapsFound = true
+          return {
+            ...allocation,
+            suggestedContribution: availableRoom,
+            additionalContribution: Math.max(0, availableRoom - allocation.currentContribution),
+            contributionRoomExceeded: true,
+          }
+        }
+        return allocation
+      })
+
+      if (!newCapsFound || excessToRedistribute <= 0) break
+
+      const accountsWithRoom = current.filter((a) => {
+        if (a.contributionRoomExceeded) return false
+        if (a.availableContributionRoom === undefined) return true
+        return a.suggestedContribution < a.availableContributionRoom
+      })
+
+      if (accountsWithRoom.length === 0) break
+
+      const redistributePerAccount = excessToRedistribute / accountsWithRoom.length
+      current = current.map((allocation) => {
+        if (allocation.contributionRoomExceeded) return allocation
+
+        const hasRoom = allocation.availableContributionRoom === undefined ||
+          allocation.suggestedContribution < allocation.availableContributionRoom
+
+        if (!hasRoom) return allocation
+
+        let additionalAmount = redistributePerAccount
+        if (allocation.availableContributionRoom !== undefined) {
+          const roomLeft = allocation.availableContributionRoom - allocation.suggestedContribution
+          additionalAmount = Math.min(redistributePerAccount, roomLeft)
+        }
+
+        const newSuggested = Math.round((allocation.suggestedContribution + additionalAmount) * 100) / 100
+        const newAdditional = Math.max(0, Math.round((newSuggested - allocation.currentContribution) * 100) / 100)
+
         return {
           ...allocation,
-          suggestedContribution: availableRoom,
-          additionalContribution: Math.max(0, availableRoom - allocation.currentContribution),
-          contributionRoomExceeded: true,
+          suggestedContribution: newSuggested,
+          additionalContribution: newAdditional,
         }
-      }
-      return allocation
-    })
-
-    if (excessToRedistribute <= 0) {
-      return cappedAllocations
+      })
     }
 
-    const accountsWithRoom = cappedAllocations.filter((a) => {
-      if (a.contributionRoomExceeded) return false
-      if (a.availableContributionRoom === undefined) return true
-      return a.suggestedContribution < a.availableContributionRoom
-    })
-
-    if (accountsWithRoom.length === 0) {
-      return cappedAllocations
-    }
-
-    const redistributePerAccount = excessToRedistribute / accountsWithRoom.length
-    const redistributedAllocations = cappedAllocations.map((allocation) => {
-      if (allocation.contributionRoomExceeded) return allocation
-      
-      const hasRoom = allocation.availableContributionRoom === undefined ||
-        allocation.suggestedContribution < allocation.availableContributionRoom
-
-      if (!hasRoom) return allocation
-
-      let additionalAmount = redistributePerAccount
-      if (allocation.availableContributionRoom !== undefined) {
-        const roomLeft = allocation.availableContributionRoom - allocation.suggestedContribution
-        additionalAmount = Math.min(redistributePerAccount, roomLeft)
-      }
-
-      const newSuggested = Math.round((allocation.suggestedContribution + additionalAmount) * 100) / 100
-      const newAdditional = Math.max(0, Math.round((newSuggested - allocation.currentContribution) * 100) / 100)
-      const exceeds = allocation.availableContributionRoom !== undefined && 
-        newSuggested > allocation.availableContributionRoom
-
-      return {
-        ...allocation,
-        suggestedContribution: newSuggested,
-        additionalContribution: newAdditional,
-        contributionRoomExceeded: exceeds,
-      }
-    })
-
-    return redistributedAllocations
+    return current
   }
 
   if (strategy === 'equal') {

@@ -4,7 +4,7 @@ import AccountListView from './components/AccountListView'
 import AllocationSuggestions from './components/AllocationSuggestions'
 import CurrentAgeInput from './components/CurrentAgeInput'
 import GoalInputPanel from './components/GoalInputPanel'
-import GoalModeToggle from './components/GoalModeToggle'
+// import GoalModeToggle from './components/GoalModeToggle'
 import GoalProgressBar from './components/GoalProgressBar'
 import ShareFooter from './components/ShareFooter'
 import ViewToggle from './components/ViewToggle'
@@ -299,9 +299,9 @@ function App() {
     setGoalState((prev) => ({ ...prev, ...updates }))
   }
 
-  const handleToggleGoalMode = () => {
-    setGoalState((prev) => ({ ...prev, isGoalMode: !prev.isGoalMode }))
-  }
+  // const handleToggleGoalMode = () => {
+  //   setGoalState((prev) => ({ ...prev, isGoalMode: !prev.isGoalMode }))
+  // }
 
   const handleInflationStateUpdate = (updates: Partial<InflationState>) => {
     setInflationState((prev) => ({ ...prev, ...updates }))
@@ -342,6 +342,38 @@ function App() {
     return nominalTotals
   }, [accounts, inflationState, maxTermYears])
 
+  const goalProjectedTotals: ProjectionTotals = useMemo(() => {
+    if (!goalState.isGoalMode || !hasAccounts) {
+      return grandTotals
+    }
+
+    const termYears = goalState.calculationType === 'contribution'
+      ? (goalState.termYears ?? 30)
+      : Math.max(...accounts.map((a) => a.termYears), 0)
+
+    const nominalTotals = accounts.reduce(
+      (totals, account) => {
+        const projection = buildProjection({ ...account, termYears })
+        return {
+          totalContributions: totals.totalContributions + projection.totals.totalContributions,
+          totalReturns: totals.totalReturns + projection.totals.totalReturns,
+          finalBalance: totals.finalBalance + projection.totals.finalBalance,
+        }
+      },
+      { totalContributions: 0, totalReturns: 0, finalBalance: 0 },
+    )
+
+    if (inflationState.isEnabled && termYears > 0) {
+      return applyInflationToTotals(
+        nominalTotals,
+        inflationState.annualRatePercent,
+        termYears,
+      )
+    }
+
+    return nominalTotals
+  }, [accounts, goalState, hasAccounts, grandTotals, inflationState])
+
   const goalCalculationResult: GoalCalculationResult | null = useMemo(() => {
     if (!goalState.isGoalMode || !hasAccounts) {
       return null
@@ -378,11 +410,16 @@ function App() {
       return []
     }
 
+    const termYears = goalState.calculationType === 'contribution'
+      ? (goalState.termYears ?? 30)
+      : Math.max(...accounts.map((a) => a.termYears), 0)
+
     return calculateAllocation({
       accounts,
       totalContribution,
       strategy: goalState.allocationStrategy,
       targetFrequency: goalState.contributionFrequency,
+      termYears,
     })
   }, [accounts, goalState, hasAccounts, goalCalculationResult])
 
@@ -404,11 +441,11 @@ function App() {
               inflationState={inflationState}
               onUpdate={handleInflationStateUpdate}
             />
-            <GoalModeToggle
+            {/* <GoalModeToggle
               isGoalMode={goalState.isGoalMode}
               onToggle={handleToggleGoalMode}
               disabled={!hasAccounts}
-            />
+            /> */}
           </div>
         </div>
         {hasAccounts ? (
@@ -459,7 +496,7 @@ function App() {
         ) : null}
         {goalState.isGoalMode && hasAccounts && (
           <GoalProgressBar
-            currentBalance={grandTotals.finalBalance}
+            currentBalance={goalProjectedTotals.finalBalance}
             targetBalance={goalState.targetBalance}
           />
         )}
@@ -505,6 +542,7 @@ function App() {
             <AllocationSuggestions
               allocations={allocations}
               frequency={goalState.contributionFrequency}
+              isGoalMet={goalProjectedTotals.finalBalance >= goalState.targetBalance}
             />
           )}
         </section>

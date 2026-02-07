@@ -43,6 +43,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+  width: -webkit-fill-available;
 }
 
 @media (max-width: 720px) {
@@ -1276,13 +1277,66 @@
 /* Inflation Controls */
 .inflation-controls {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: end;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
 .inflation-controls__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   flex-shrink: 0;
+}
+
+.inflation-controls__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.inflation-controls__switch {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.inflation-controls__switch:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.inflation-controls__switch:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inflation-controls__switch--active {
+  background: rgba(74, 222, 128, 0.25);
+  border-color: rgba(74, 222, 128, 0.6);
+}
+
+.inflation-controls__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.inflation-controls__switch--active .inflation-controls__thumb {
+  transform: translateX(24px);
+  background: #4ade80;
 }
 
 .inflation-controls__input {
@@ -1306,6 +1360,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 0.5rem 0.6rem;
+  margin-left: 0.75rem;
   color: var(--text-primary);
   font-size: 0.95rem;
   font-family: var(--font-sans);
@@ -1321,28 +1376,6 @@
   margin: 0;
 }
 
-/* Toggle Button */
-.button--toggle {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 0.6rem 1rem;
-  font-size: 0.85rem;
-}
-
-.button--toggle:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.button--toggle-active {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.4);
-}
-
-.button--toggle-active:hover {
-  background: rgba(74, 222, 128, 0.2);
-}
 
 /* Contribution Room Warning */
 .contribution-room-warning {

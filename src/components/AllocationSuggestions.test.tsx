@@ -73,7 +73,7 @@ describe('AllocationSuggestions', () => {
 
   it('renders nothing when allocations are empty', () => {
     const { container } = render(
-      <AllocationSuggestions allocations={[]} frequency="monthly" />
+      <AllocationSuggestions allocations={[]} frequency="monthly" isGoalMet={false} />
     )
     expect(container.firstChild).toBeNull()
   })
@@ -83,6 +83,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByText('Brokerage')).toBeTruthy()
@@ -94,6 +95,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByText('+$450')).toBeTruthy()
@@ -105,6 +107,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByText('Current: $300/month')).toBeTruthy()
@@ -116,6 +119,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByText(/Increase contributions by \$600\/month/)).toBeTruthy()
@@ -126,6 +130,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithNetIncrease()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByText(/Increase contributions by \$59\/month/)).toBeTruthy()
@@ -137,6 +142,31 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsOnTrack()}
         frequency="monthly"
+        isGoalMet={true}
+      />
+    )
+    expect(screen.getByText("You're On Track!")).toBeTruthy()
+    expect(screen.getByText(/meet or exceed/)).toBeTruthy()
+  })
+
+  it('shows close-but-not-met message when goal not met but no net increase needed', () => {
+    render(
+      <AllocationSuggestions
+        allocations={createAllocationsOnTrack()}
+        frequency="monthly"
+        isGoalMet={false}
+      />
+    )
+    expect(screen.getByText("You're On Track!")).toBeTruthy()
+    expect(screen.getByText(/close but has not yet reached/)).toBeTruthy()
+  })
+
+  it('shows on track when goal met even if allocations suggest increases', () => {
+    render(
+      <AllocationSuggestions
+        allocations={createAllocationsWithAdditional()}
+        frequency="monthly"
+        isGoalMet={true}
       />
     )
     expect(screen.getByText("You're On Track!")).toBeTruthy()
@@ -170,6 +200,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={allocations}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
 
@@ -182,6 +213,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="bi-weekly"
+        isGoalMet={false}
       />
     )
     expect(screen.getAllByText(/\/bi-week/).length).toBeGreaterThan(0)
@@ -192,6 +224,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="annually"
+        isGoalMet={false}
       />
     )
     expect(screen.getAllByText(/\/year/).length).toBeGreaterThan(0)
@@ -202,6 +235,7 @@ describe('AllocationSuggestions', () => {
       <AllocationSuggestions
         allocations={createAllocationsWithAdditional()}
         frequency="monthly"
+        isGoalMet={false}
       />
     )
     expect(screen.getByRole('list')).toBeTruthy()

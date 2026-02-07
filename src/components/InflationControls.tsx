@@ -42,18 +42,23 @@ function InflationControls({ inflationState, onUpdate }: InflationControlsProps)
     (!Number.isFinite(parsedRate) || !isValidInflationRate(parsedRate))
   const helpText = showError
     ? `Enter a rate between ${MIN_INFLATION_RATE}% and ${MAX_INFLATION_RATE}%.`
-    : 'Annual inflation rate'
+    : ''
 
   return (
     <div className="inflation-controls">
       <div className="inflation-controls__toggle">
+        <span className="inflation-controls__label" id="inflation-toggle-label">
+          Inflation Adjusted
+        </span>
         <button
           type="button"
-          className={`button button--toggle ${inflationState.isEnabled ? 'button--toggle-active' : ''}`}
+          role="switch"
+          aria-checked={inflationState.isEnabled}
+          aria-labelledby="inflation-toggle-label"
+          className={`inflation-controls__switch ${inflationState.isEnabled ? 'inflation-controls__switch--active' : ''}`}
           onClick={handleToggle}
-          aria-pressed={inflationState.isEnabled}
         >
-          {inflationState.isEnabled ? 'Real values on' : 'Real values off'}
+          <span className="inflation-controls__thumb" />
         </button>
       </div>
 

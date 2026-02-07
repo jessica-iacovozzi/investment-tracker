@@ -532,6 +532,158 @@ describe('calculateAllocation with contribution room', () => {
   })
 })
 
+describe('calculateRequiredContribution with contribution room', () => {
+  it('accounts for TFSA room limits when calculating required contribution', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 15000,
+        annualRatePercent: 7,
+        accountType: 'tfsa',
+        contributionRoom: 7000,
+        customAnnualRoomIncrease: 7000,
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'Brokerage',
+        principal: 15000,
+        annualRatePercent: 7,
+        accountType: 'non-registered',
+      }),
+    ]
+    const result = calculateRequiredContribution({
+      accounts,
+      targetBalance: 200000,
+      termYears: 10,
+      contributionFrequency: 'monthly',
+    })
+
+    expect(result.isReachable).toBe(true)
+    expect(result.requiredContribution).toBeGreaterThan(0)
+
+    const allocations = calculateAllocation({
+      accounts,
+      totalContribution: result.requiredContribution!,
+      strategy: 'proportional',
+      targetFrequency: 'monthly',
+      termYears: 10,
+    })
+
+    const tfsaAlloc = allocations.find((a) => a.accountId === '1')
+    if (tfsaAlloc?.availableContributionRoom !== undefined) {
+      expect(tfsaAlloc.suggestedContribution).toBeLessThanOrEqual(
+        tfsaAlloc.availableContributionRoom + 0.01,
+      )
+    }
+  })
+
+  it('produces a higher required contribution when room caps redirect to lower-return accounts', () => {
+    const accountsNoCap = [
+      createMockAccount({
+        id: '1',
+        name: 'High Return',
+        principal: 20000,
+        annualRatePercent: 10,
+        accountType: 'non-registered',
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'Low Return',
+        principal: 10000,
+        annualRatePercent: 4,
+        accountType: 'non-registered',
+      }),
+    ]
+
+    const accountsWithCap = [
+      createMockAccount({
+        id: '1',
+        name: 'High Return TFSA',
+        principal: 20000,
+        annualRatePercent: 10,
+        accountType: 'tfsa',
+        contributionRoom: 100,
+        customAnnualRoomIncrease: 0,
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'Low Return',
+        principal: 10000,
+        annualRatePercent: 4,
+        accountType: 'non-registered',
+      }),
+    ]
+
+    const resultNoCap = calculateRequiredContribution({
+      accounts: accountsNoCap,
+      targetBalance: 200000,
+      termYears: 10,
+      contributionFrequency: 'monthly',
+    })
+
+    const resultWithCap = calculateRequiredContribution({
+      accounts: accountsWithCap,
+      targetBalance: 200000,
+      termYears: 10,
+      contributionFrequency: 'monthly',
+    })
+
+    expect(resultNoCap.isReachable).toBe(true)
+    expect(resultWithCap.isReachable).toBe(true)
+    expect(resultWithCap.requiredContribution).toBeGreaterThan(
+      resultNoCap.requiredContribution!,
+    )
+  })
+})
+
+describe('calculateAllocation cascading caps', () => {
+  it('redistributes excess iteratively when multiple accounts hit caps', () => {
+    const accounts = [
+      createMockAccount({
+        id: '1',
+        name: 'TFSA',
+        principal: 10000,
+        accountType: 'tfsa',
+        contributionRoom: 100,
+        customAnnualRoomIncrease: 0,
+      }),
+      createMockAccount({
+        id: '2',
+        name: 'RRSP',
+        principal: 10000,
+        accountType: 'rrsp',
+        contributionRoom: 200,
+        customAnnualRoomIncrease: 0,
+      }),
+      createMockAccount({
+        id: '3',
+        name: 'Brokerage',
+        principal: 10000,
+        accountType: 'non-registered',
+      }),
+    ]
+    const result = calculateAllocation({
+      accounts,
+      totalContribution: 900,
+      strategy: 'equal',
+      targetFrequency: 'monthly',
+      termYears: 1,
+    })
+
+    const tfsa = result.find((a) => a.accountId === '1')
+    const rrsp = result.find((a) => a.accountId === '2')
+    const brokerage = result.find((a) => a.accountId === '3')
+
+    expect(tfsa?.contributionRoomExceeded).toBe(true)
+    expect(rrsp?.contributionRoomExceeded).toBe(true)
+    expect(brokerage?.suggestedContribution).toBeGreaterThan(300)
+
+    const totalSuggested = result.reduce((sum, a) => sum + a.suggestedContribution, 0)
+    expect(totalSuggested).toBeCloseTo(900, 0)
+  })
+})
+
 describe('formatTermFromMonths', () => {
   it('formats months only', () => {
     expect(formatTermFromMonths(6)).toBe('6 months')
