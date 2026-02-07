@@ -4,6 +4,7 @@ import type { InflationState } from '../types/inflation'
 import { DEFAULT_INFLATION_STATE } from '../types/inflation'
 import type { ViewPreference } from '../types/investment'
 
+const ACCOUNTS_STORAGE_KEY = 'investment-tracker-accounts'
 const TERM_YEARS_STORAGE_KEY = 'investment-tracker-term-years'
 const GOAL_STORAGE_KEY = 'investment-tracker-goal'
 const INFLATION_STORAGE_KEY = 'investment-tracker-inflation'
@@ -34,8 +35,53 @@ const DEFAULT_TERM_YEARS = 10
 const MIN_TERM_YEARS = 1
 const MAX_TERM_YEARS = 100
 
+type LegacyAccount = { termYears?: number; [key: string]: unknown }
+
+/**
+ * One-time migration: extract the max termYears from legacy per-account data,
+ * save it as the global term, and strip the field from stored accounts.
+ * Returns the migrated value or DEFAULT_TERM_YEARS if nothing was found.
+ */
+const migrateLegacyTermYears = (): number => {
+  try {
+    const raw = window.localStorage.getItem(ACCOUNTS_STORAGE_KEY)
+    if (!raw) {
+      return DEFAULT_TERM_YEARS
+    }
+
+    const accounts = JSON.parse(raw) as LegacyAccount[]
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      return DEFAULT_TERM_YEARS
+    }
+
+    const legacyValues = accounts
+      .map((a) => a.termYears)
+      .filter(
+        (v): v is number =>
+          typeof v === 'number' && Number.isFinite(v) && v >= MIN_TERM_YEARS && v <= MAX_TERM_YEARS,
+      )
+
+    const migratedTerm =
+      legacyValues.length > 0 ? Math.max(...legacyValues) : DEFAULT_TERM_YEARS
+
+    window.localStorage.setItem(TERM_YEARS_STORAGE_KEY, String(migratedTerm))
+
+    const cleaned = accounts.map((account) => {
+      const copy = { ...account }
+      delete copy.termYears
+      return copy
+    })
+    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(cleaned))
+
+    return migratedTerm
+  } catch {
+    return DEFAULT_TERM_YEARS
+  }
+}
+
 /**
  * Load global term years from localStorage.
+ * On first load after the refactor, migrates legacy per-account termYears.
  */
 export const loadTermYears = ({
   storageAvailable,
@@ -48,7 +94,7 @@ export const loadTermYears = ({
 
   const storedValue = window.localStorage.getItem(TERM_YEARS_STORAGE_KEY)
   if (!storedValue) {
-    return DEFAULT_TERM_YEARS
+    return migrateLegacyTermYears()
   }
 
   const parsed = Number(storedValue)
