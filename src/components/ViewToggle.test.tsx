@@ -37,24 +37,6 @@ describe('ViewToggle', () => {
 
   it('navigates to next tab with ArrowRight', () => {
     const handleChange = vi.fn()
-    render(<ViewToggle activeView="cards" onChange={handleChange} />)
-
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Cards' }), { key: 'ArrowRight' })
-
-    expect(handleChange).toHaveBeenCalledWith('list')
-  })
-
-  it('navigates to previous tab with ArrowLeft', () => {
-    const handleChange = vi.fn()
-    render(<ViewToggle activeView="list" onChange={handleChange} />)
-
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'List' }), { key: 'ArrowLeft' })
-
-    expect(handleChange).toHaveBeenCalledWith('cards')
-  })
-
-  it('wraps around from last to first tab with ArrowRight', () => {
-    const handleChange = vi.fn()
     render(<ViewToggle activeView="list" onChange={handleChange} />)
 
     fireEvent.keyDown(screen.getByRole('tab', { name: 'List' }), { key: 'ArrowRight' })
@@ -62,13 +44,31 @@ describe('ViewToggle', () => {
     expect(handleChange).toHaveBeenCalledWith('cards')
   })
 
-  it('wraps around from first to last tab with ArrowLeft', () => {
+  it('navigates to previous tab with ArrowLeft', () => {
     const handleChange = vi.fn()
     render(<ViewToggle activeView="cards" onChange={handleChange} />)
 
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Cards' }), { key: 'ArrowLeft' })
 
     expect(handleChange).toHaveBeenCalledWith('list')
+  })
+
+  it('wraps around from last to first tab with ArrowRight', () => {
+    const handleChange = vi.fn()
+    render(<ViewToggle activeView="cards" onChange={handleChange} />)
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Cards' }), { key: 'ArrowRight' })
+
+    expect(handleChange).toHaveBeenCalledWith('list')
+  })
+
+  it('wraps around from first to last tab with ArrowLeft', () => {
+    const handleChange = vi.fn()
+    render(<ViewToggle activeView="list" onChange={handleChange} />)
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'List' }), { key: 'ArrowLeft' })
+
+    expect(handleChange).toHaveBeenCalledWith('cards')
   })
 
   it('renders a tablist container with accessible label', () => {

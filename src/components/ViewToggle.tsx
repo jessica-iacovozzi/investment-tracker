@@ -7,8 +7,8 @@ type ViewToggleProps = {
 }
 
 const TABS: { value: ViewPreference; label: string }[] = [
-  { value: 'cards', label: 'Cards' },
   { value: 'list', label: 'List' },
+  { value: 'cards', label: 'Cards' },
 ]
 
 /**

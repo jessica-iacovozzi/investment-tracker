@@ -7,7 +7,7 @@ import type { ViewPreference } from '../types/investment'
 const GOAL_STORAGE_KEY = 'investment-tracker-goal'
 const INFLATION_STORAGE_KEY = 'investment-tracker-inflation'
 const VIEW_PREFERENCE_STORAGE_KEY = 'investmentTracker_viewPreference'
-const DEFAULT_VIEW_PREFERENCE: ViewPreference = 'cards'
+const DEFAULT_VIEW_PREFERENCE: ViewPreference = 'list'
 const VALID_VIEW_PREFERENCES: ViewPreference[] = ['cards', 'list']
 
 /**

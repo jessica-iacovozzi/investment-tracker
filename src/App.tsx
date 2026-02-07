@@ -500,24 +500,6 @@ function App() {
             targetBalance={goalState.targetBalance}
           />
         )}
-        {hasAccounts ? (
-          <div className="app__actions">
-            <button
-              className="button button--ghost"
-              type="button"
-              onClick={handleResetAccounts}
-            >
-              Reset defaults
-            </button>
-            <button
-              className="button button--primary"
-              type="button"
-              onClick={handleAddAccount}
-            >
-              + Add account
-            </button>
-          </div>
-        ) : null}
       </header>
 
       {!storageAvailable && (
@@ -549,7 +531,25 @@ function App() {
       )}
 
       {hasAccounts && (
-        <ViewToggle activeView={viewPreference} onChange={setViewPreference} />
+        <div className="app__toolbar">
+          <ViewToggle activeView={viewPreference} onChange={setViewPreference} />
+          <div className="app__actions">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={handleResetAccounts}
+            >
+              Reset defaults
+            </button>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={handleAddAccount}
+            >
+              + Add account
+            </button>
+          </div>
+        </div>
       )}
 
       {hasAccounts ? (

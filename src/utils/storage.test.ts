@@ -297,17 +297,17 @@ describe('clearInflationState', () => {
 })
 
 describe('loadViewPreference', () => {
-  it('returns cards when storage unavailable', () => {
+  it('returns list when storage unavailable', () => {
     const result = loadViewPreference({ storageAvailable: false })
-    expect(result).toBe('cards')
+    expect(result).toBe('list')
   })
 
-  it('returns cards when no stored value', () => {
+  it('returns list when no stored value', () => {
     const mockStorage = buildMockStorage()
     vi.stubGlobal('window', { localStorage: mockStorage })
 
     const result = loadViewPreference({ storageAvailable: true })
-    expect(result).toBe('cards')
+    expect(result).toBe('list')
 
     vi.unstubAllGlobals()
   })
@@ -323,13 +323,13 @@ describe('loadViewPreference', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns cards for invalid stored value', () => {
+  it('returns list for invalid stored value', () => {
     const mockStorage = buildMockStorage()
     mockStorage.setItem('investmentTracker_viewPreference', 'table')
     vi.stubGlobal('window', { localStorage: mockStorage })
 
     const result = loadViewPreference({ storageAvailable: true })
-    expect(result).toBe('cards')
+    expect(result).toBe('list')
 
     vi.unstubAllGlobals()
   })
