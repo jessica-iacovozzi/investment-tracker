@@ -32,11 +32,6 @@ function GoalInputPanel({
     onUpdate({ calculationType: type })
   }
 
-  const handleTermYearsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.max(1, parseFloat(e.target.value) || 1)
-    onUpdate({ termYears: value })
-  }
-
   const handleContributionAmountChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -154,20 +149,6 @@ function GoalInputPanel({
 
         {goalState.calculationType === 'contribution' ? (
           <div className="field-row">
-            <div className="field-group">
-              <label htmlFor="term-years" className="field-label">
-                Term (years)
-              </label>
-              <input
-                id="term-years"
-                type="number"
-                className="field-input"
-                value={goalState.termYears || ''}
-                onChange={handleTermYearsChange}
-                min={GOAL_VALIDATION.MIN_TERM_YEARS}
-                max={GOAL_VALIDATION.MAX_TERM_YEARS}
-              />
-            </div>
             <div className="field-group">
               <label htmlFor="contribution-frequency" className="field-label">
                 Frequency

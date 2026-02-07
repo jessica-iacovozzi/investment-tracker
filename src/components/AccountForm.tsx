@@ -36,6 +36,7 @@ const DEFAULT_CONTRIBUTION = {
 
 type AccountFormProps = {
   account: AccountInput
+  termYears: number
   onUpdate: (payload: AccountUpdatePayload) => void
   sameTypeAccountCount?: number
   allAccounts?: AccountInput[]
@@ -44,7 +45,6 @@ type AccountFormProps = {
 type NumericInputs = {
   principal: string
   annualRatePercent: string
-  termYears: string
   contributionAmount: string
   contributionStartMonth: string
   contributionEndMonth: string
@@ -60,7 +60,6 @@ const formatNumberInput = (value: number | undefined) =>
 const buildNumericInputs = (input: AccountInput): NumericInputs => ({
   principal: formatNumberInput(input.principal),
   annualRatePercent: formatNumberInput(input.annualRatePercent),
-  termYears: formatNumberInput(input.termYears),
   contributionAmount: formatNumberInput(input.contribution?.amount),
   contributionStartMonth: formatNumberInput(input.contribution?.startMonth),
   contributionEndMonth: formatNumberInput(input.contribution?.endMonth),
@@ -75,39 +74,6 @@ const buildPayload = (id: string, changes: Partial<AccountInput>) => ({
   changes,
 })
 
-const clampMonth = (value: number, maxMonth: number) =>
-  Math.min(Math.max(value, 1), maxMonth)
-
-const getAdjustedContributionRange = ({
-  contribution,
-  termYears,
-  previousTotalMonths,
-}: {
-  contribution?: AccountInput['contribution']
-  termYears: number
-  previousTotalMonths?: number
-}) => {
-  if (!contribution) {
-    return null
-  }
-
-  const totalMonths = Math.max(Math.round(termYears * 12), 1)
-  const priorTotalMonths =
-    previousTotalMonths ?? Math.max(Math.round(termYears * 12), 1)
-  const startMonth = clampMonth(contribution.startMonth, totalMonths)
-  const shouldExtendEndMonth =
-    totalMonths > priorTotalMonths && contribution.endMonth === priorTotalMonths
-  const endMonthBase = shouldExtendEndMonth
-    ? totalMonths
-    : contribution.endMonth
-  const endMonth = clampMonth(
-    Math.max(endMonthBase, startMonth),
-    totalMonths,
-  )
-
-  return { startMonth, endMonth }
-}
-
 const FREQUENCY_OPTIONS: ContributionFrequency[] = [
   'bi-weekly',
   'monthly',
@@ -116,13 +82,13 @@ const FREQUENCY_OPTIONS: ContributionFrequency[] = [
 ]
 
 const COMPOUNDING_OPTIONS: CompoundingFrequency[] = COMPOUNDING_FREQUENCIES
-function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = [] }: AccountFormProps) {
+function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAccounts = [] }: AccountFormProps) {
   const [numericInputs, setNumericInputs] = useState<NumericInputs>(() =>
     buildNumericInputs(account),
   )
   const [editingField, setEditingField] = useState<keyof NumericInputs | null>(null)
   const hasContribution = Boolean(account.contribution)
-  const totalMonths = Math.max(Math.round(account.termYears * 12), 1)
+  const totalMonths = Math.max(Math.round(termYears * 12), 1)
   const contributionFrequency = account.contribution?.frequency ?? 'monthly'
   const normalizedTiming = normalizeTimingForFrequency({
     timing: account.contributionTiming,
@@ -326,36 +292,6 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
       onUpdateField: (nextValue) =>
         onUpdate(buildPayload(account.id, { annualRatePercent: nextValue })),
     })
-  }
-
-  const handleTermChange = (value: string) => {
-    const parsed = Number(value)
-    const isInvalid = value === '' || Number.isNaN(parsed)
-    const adjustedRange = isInvalid
-      ? null
-      : getAdjustedContributionRange({
-          contribution: account.contribution,
-          termYears: parsed,
-          previousTotalMonths: Math.max(Math.round(account.termYears * 12), 1),
-        })
-
-    setNumericInputs((prev) => ({
-      ...prev,
-      termYears: value,
-      ...(adjustedRange
-        ? {
-            contributionStartMonth: formatNumberInput(adjustedRange.startMonth),
-            contributionEndMonth: formatNumberInput(adjustedRange.endMonth),
-          }
-        : {}),
-    }))
-
-    if (isInvalid) {
-      onUpdate(buildPayload(account.id, { termYears: 0 }))
-      return
-    }
-
-    onUpdate(buildPayload(account.id, { termYears: parsed }))
   }
 
   const handleCompoundingChange = (value: string) => {
@@ -734,18 +670,6 @@ function AccountForm({ account, onUpdate, sameTypeAccountCount, allAccounts = []
             step="0.1"
             value={numericInputs.annualRatePercent}
             onChange={(event) => handleRateChange(event.target.value)}
-          />
-        </div>
-
-        <div className="field-group">
-          <label htmlFor={`${account.id}-term`}>Term (years)</label>
-          <input
-            id={`${account.id}-term`}
-            type="number"
-            min="1"
-            step="1"
-            value={numericInputs.termYears}
-            onChange={(event) => handleTermChange(event.target.value)}
           />
         </div>
 

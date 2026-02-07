@@ -112,8 +112,8 @@ export const getFrequencyLabel = (frequency: ContributionFrequency) =>
 // rate derived from the selected frequency. Contribution timing is applied
 // before or after monthly compounding, and year-based timing only applies on
 // month 1 (beginning) or 12 (end).
-export const buildProjection = (input: AccountInput): AccountProjection => {
-  const totalMonths = Math.max(Math.round(input.termYears * 12), 1)
+export const buildProjection = (input: AccountInput, termYears: number): AccountProjection => {
+  const totalMonths = Math.max(Math.round(termYears * 12), 1)
   const timingFrequency = input.contribution?.frequency ?? 'monthly'
   if (
     input.contribution &&

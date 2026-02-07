@@ -88,8 +88,7 @@ export const calculateFutureValueWithExistingContributions = (
   termYears: number,
 ): number => {
   return accounts.reduce((total, account) => {
-    const accountWithTerm = { ...account, termYears }
-    const projection = buildProjection(accountWithTerm)
+    const projection = buildProjection(account, termYears)
     return total + projection.totals.finalBalance
   }, 0)
 }
@@ -111,7 +110,7 @@ const findRequiredContributionByProjection = (
   const lockedAccounts = accounts.filter((acc) => acc.isLockedIn)
 
   const lockedProjectedBalance = lockedAccounts.reduce((total, account) => {
-    const projection = buildProjection({ ...account, termYears })
+    const projection = buildProjection(account, termYears)
     return total + projection.totals.finalBalance
   }, 0)
 
@@ -180,7 +179,6 @@ const findRequiredContributionByProjection = (
       const accountContribution = distributed[index]
       const modified = {
         ...account,
-        termYears,
         contributionTiming: getDefaultTimingForFrequency(contributionFrequency),
         contribution: {
           amount: accountContribution,
@@ -189,7 +187,7 @@ const findRequiredContributionByProjection = (
           endMonth: termYears * 12,
         },
       }
-      return total + buildProjection(modified).totals.finalBalance
+      return total + buildProjection(modified, termYears).totals.finalBalance
     }, 0) + lockedProjectedBalance
   }
 
@@ -478,7 +476,7 @@ const getAvailableRoomForAllocation = (
 
   const sameTypeAccounts = getAccountsByType(allAccounts, account.accountType)
   const mostRecentAccount = getMostRecentAccountByType(allAccounts, account.accountType)
-  const baseAccount = mostRecentAccount ? { ...mostRecentAccount, termYears } : account
+  const baseAccount = mostRecentAccount ?? account
   const annualRooms = getAnnualContributionRoomLimits(baseAccount, termYears)
 
   if (annualRooms.length === 0) {
@@ -537,13 +535,13 @@ export const calculateAllocation = ({
   totalContribution,
   strategy,
   targetFrequency,
-  termYears = 30,
+  termYears,
 }: {
   accounts: AccountInput[]
   totalContribution: number
   strategy: AllocationStrategy
   targetFrequency: ContributionFrequency
-  termYears?: number
+  termYears: number
 }): AccountAllocation[] => {
   if (accounts.length === 0 || totalContribution <= 0) {
     return []

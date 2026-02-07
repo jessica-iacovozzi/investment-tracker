@@ -6,7 +6,7 @@ import { applyInflationToProjection } from '../utils/inflation'
 import { getContributionRoomResult, calculateTotalProjectedContributions } from '../utils/contributionRoom'
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
 import { getAggregatedContributionSummary, getAccountsByType } from '../utils/sharedContributionRoom'
-import { adjustContributionRange, normalizeContributionTiming } from '../utils/accountCardHelpers'
+import { normalizeContributionTiming } from '../utils/accountCardHelpers'
 import AccountChart from './AccountChart'
 import AccountForm from './AccountForm'
 import AccountSummary from './AccountSummary'
@@ -14,38 +14,39 @@ import AccountSummary from './AccountSummary'
 type AccountCardProps = {
   account: AccountInput
   allAccounts: AccountInput[]
+  termYears: number
   currentAge?: number
   inflationState: InflationState
   onUpdate: (payload: AccountUpdatePayload) => void
   onDelete: (id: string) => void
 }
 
-function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {
+function AccountCard({ account, allAccounts, termYears, currentAge, inflationState, onUpdate, onDelete }: AccountCardProps) {
   const projection = useMemo(() => {
-    const baseProjection = buildProjection(account)
+    const baseProjection = buildProjection(account, termYears)
     if (inflationState.isEnabled) {
       return applyInflationToProjection(
         baseProjection,
         inflationState.annualRatePercent,
-        account.termYears,
+        termYears,
       )
     }
     return baseProjection
-  }, [account, inflationState])
+  }, [account, termYears, inflationState])
 
   const contributionRoomResult = useMemo(() => {
     if (!isTaxAdvantagedAccount(account.accountType)) {
       return undefined
     }
-    return getContributionRoomResult(account)
-  }, [account])
+    return getContributionRoomResult(account, termYears)
+  }, [account, termYears])
 
   const aggregatedSummary: AccountTypeContributionSummary | undefined = useMemo(() => {
     if (!isTaxAdvantagedAccount(account.accountType)) {
       return undefined
     }
-    return getAggregatedContributionSummary(allAccounts, account.accountType)
-  }, [allAccounts, account.accountType])
+    return getAggregatedContributionSummary(allAccounts, account.accountType, termYears)
+  }, [allAccounts, account.accountType, termYears])
 
   const thisAccountContributions = useMemo(() => {
     return calculateTotalProjectedContributions(account)
@@ -56,8 +57,7 @@ function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdat
   }, [allAccounts, account.accountType])
 
   const handleUpdate = (payload: AccountUpdatePayload) => {
-    const adjustedPayload = adjustContributionRange(account, payload)
-    const normalizedPayload = normalizeContributionTiming(account, adjustedPayload)
+    const normalizedPayload = normalizeContributionTiming(account, payload)
     onUpdate(normalizedPayload)
   }
 
@@ -90,6 +90,7 @@ function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdat
       <div className="account-card__content">
         <AccountForm
           account={account}
+          termYears={termYears}
           onUpdate={handleUpdate}
           sameTypeAccountCount={sameTypeAccountCount}
           allAccounts={allAccounts}
@@ -97,7 +98,7 @@ function AccountCard({ account, allAccounts, currentAge, inflationState, onUpdat
         <AccountSummary
           totals={projection.totals}
           currentAge={currentAge}
-          termYears={account.termYears}
+          termYears={termYears}
           inflationEnabled={inflationState.isEnabled}
           accountType={account.accountType}
           contributionRoomResult={contributionRoomResult}

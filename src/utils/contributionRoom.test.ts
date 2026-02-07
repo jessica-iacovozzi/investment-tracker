@@ -19,7 +19,6 @@ const buildAccount = (
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
-  termYears: 10,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   ...overrides,
@@ -33,7 +32,6 @@ describe('calculateTotalProjectedContributions', () => {
 
   it('calculates monthly contributions over full term', () => {
     const account = buildAccount({
-      termYears: 5,
       contribution: {
         amount: 500,
         frequency: 'monthly',
@@ -46,7 +44,6 @@ describe('calculateTotalProjectedContributions', () => {
 
   it('calculates bi-weekly contributions', () => {
     const account = buildAccount({
-      termYears: 1,
       contribution: {
         amount: 200,
         frequency: 'bi-weekly',
@@ -59,7 +56,6 @@ describe('calculateTotalProjectedContributions', () => {
 
   it('calculates quarterly contributions', () => {
     const account = buildAccount({
-      termYears: 2,
       contribution: {
         amount: 1000,
         frequency: 'quarterly',
@@ -72,7 +68,6 @@ describe('calculateTotalProjectedContributions', () => {
 
   it('calculates annual contributions', () => {
     const account = buildAccount({
-      termYears: 10,
       contribution: {
         amount: 7000,
         frequency: 'annually',
@@ -85,7 +80,6 @@ describe('calculateTotalProjectedContributions', () => {
 
   it('handles partial year contributions', () => {
     const account = buildAccount({
-      termYears: 1,
       contribution: {
         amount: 500,
         frequency: 'monthly',
@@ -100,7 +94,6 @@ describe('calculateTotalProjectedContributions', () => {
 describe('getAnnualProjectedContributions', () => {
   it('calculates bi-weekly contributions by year', () => {
     const account = buildAccount({
-      termYears: 1,
       contribution: {
         amount: 200,
         frequency: 'bi-weekly',
@@ -108,12 +101,11 @@ describe('getAnnualProjectedContributions', () => {
         endMonth: 12,
       },
     })
-    expect(getAnnualProjectedContributions(account)).toEqual([5200])
+    expect(getAnnualProjectedContributions(account, 1)).toEqual([5200])
   })
 
   it('handles partial-year bi-weekly contributions', () => {
     const account = buildAccount({
-      termYears: 1,
       contribution: {
         amount: 200,
         frequency: 'bi-weekly',
@@ -121,7 +113,7 @@ describe('getAnnualProjectedContributions', () => {
         endMonth: 6,
       },
     })
-    expect(getAnnualProjectedContributions(account)).toEqual([2600])
+    expect(getAnnualProjectedContributions(account, 1)).toEqual([2600])
   })
 })
 
@@ -179,77 +171,70 @@ describe('getAnnualRoomIncrease', () => {
 describe('calculateAvailableRoom', () => {
   it('returns Infinity for non-registered accounts', () => {
     const account = buildAccount({ accountType: 'non-registered' })
-    expect(calculateAvailableRoom(account)).toBe(Infinity)
+    expect(calculateAvailableRoom(account, 10)).toBe(Infinity)
   })
 
   it('calculates TFSA room with initial room and annual increases', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 50000,
-      termYears: 5,
     })
-    expect(calculateAvailableRoom(account)).toBe(85000)
+    expect(calculateAvailableRoom(account, 5)).toBe(85000)
   })
 
   it('calculates RRSP room with income-based increases', () => {
     const account = buildAccount({
       accountType: 'rrsp',
       contributionRoom: 20000,
-      termYears: 3,
       annualIncomeForRrsp: 100000,
     })
-    expect(calculateAvailableRoom(account)).toBe(74000)
+    expect(calculateAvailableRoom(account, 3)).toBe(74000)
   })
 
   it('calculates FHSA room respecting lifetime limit', () => {
     const account = buildAccount({
       accountType: 'fhsa',
       contributionRoom: 8000,
-      termYears: 10,
       fhsaLifetimeContributions: 0,
     })
-    expect(calculateAvailableRoom(account)).toBeLessThanOrEqual(40000)
+    expect(calculateAvailableRoom(account, 10)).toBeLessThanOrEqual(40000)
   })
 
   it('handles FHSA with existing lifetime contributions', () => {
     const account = buildAccount({
       accountType: 'fhsa',
       contributionRoom: 8000,
-      termYears: 5,
       fhsaLifetimeContributions: 24000,
     })
-    expect(calculateAvailableRoom(account)).toBeLessThanOrEqual(16000)
+    expect(calculateAvailableRoom(account, 5)).toBeLessThanOrEqual(16000)
   })
 
   it('returns initial room when term is 0', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 50000,
-      termYears: 0,
     })
-    expect(calculateAvailableRoom(account)).toBe(50000)
+    expect(calculateAvailableRoom(account, 0)).toBe(50000)
   })
 
   it('returns 0 when no contribution room specified', () => {
     const account = buildAccount({
       accountType: 'tfsa',
-      termYears: 0,
     })
-    expect(calculateAvailableRoom(account)).toBe(0)
+    expect(calculateAvailableRoom(account, 0)).toBe(0)
   })
 })
 
 describe('calculateRemainingRoom', () => {
   it('returns Infinity for non-registered accounts', () => {
     const account = buildAccount({ accountType: 'non-registered' })
-    expect(calculateRemainingRoom(account)).toBe(Infinity)
+    expect(calculateRemainingRoom(account, 10)).toBe(Infinity)
   })
 
   it('calculates remaining room after contributions', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 50000,
-      termYears: 5,
       contribution: {
         amount: 500,
         frequency: 'monthly',
@@ -257,14 +242,13 @@ describe('calculateRemainingRoom', () => {
         endMonth: 60,
       },
     })
-    expect(calculateRemainingRoom(account)).toBe(55000)
+    expect(calculateRemainingRoom(account, 5)).toBe(55000)
   })
 
   it('returns negative when over-contributing', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 10000,
-      termYears: 1,
       contribution: {
         amount: 2000,
         frequency: 'monthly',
@@ -272,7 +256,7 @@ describe('calculateRemainingRoom', () => {
         endMonth: 12,
       },
     })
-    expect(calculateRemainingRoom(account)).toBeLessThan(0)
+    expect(calculateRemainingRoom(account, 1)).toBeLessThan(0)
   })
 })
 
@@ -287,7 +271,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 12,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 10)
     expect(result.exceedsRoom).toBe(false)
     expect(result.excessAmount).toBe(0)
   })
@@ -296,7 +280,6 @@ describe('getOverContributionDetails', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 50000,
-      termYears: 5,
       contribution: {
         amount: 500,
         frequency: 'monthly',
@@ -304,7 +287,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 60,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 5)
     expect(result.exceedsRoom).toBe(false)
   })
 
@@ -312,7 +295,6 @@ describe('getOverContributionDetails', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 10000,
-      termYears: 1,
       contribution: {
         amount: 2000,
         frequency: 'monthly',
@@ -320,7 +302,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 12,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 1)
     expect(result.exceedsRoom).toBe(true)
     expect(result.excessAmount).toBeGreaterThan(0)
     expect(result.estimatedPenalty).toBeGreaterThan(0)
@@ -331,7 +313,6 @@ describe('getOverContributionDetails', () => {
       accountType: 'tfsa',
       contributionRoom: 5000,
       customAnnualRoomIncrease: 0,
-      termYears: 2,
       contribution: {
         amount: 600,
         frequency: 'monthly',
@@ -339,7 +320,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 24,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 2)
     expect(result.exceedsRoom).toBe(true)
     expect(result.yearOfOverContribution).toBe(1)
   })
@@ -349,7 +330,6 @@ describe('getOverContributionDetails', () => {
       accountType: 'tfsa',
       contributionRoom: 5000,
       customAnnualRoomIncrease: 5000,
-      termYears: 2,
       contribution: {
         amount: 7000,
         frequency: 'annually',
@@ -357,7 +337,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 24,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 2)
     expect(result.exceedsRoom).toBe(false)
   })
 
@@ -365,7 +345,6 @@ describe('getOverContributionDetails', () => {
     const account = buildAccount({
       accountType: 'rrsp',
       contributionRoom: 10000,
-      termYears: 1,
       contribution: {
         amount: 1000,
         frequency: 'monthly',
@@ -373,7 +352,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 12,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 1)
     expect(result.exceedsRoom).toBe(false)
   })
 
@@ -381,7 +360,6 @@ describe('getOverContributionDetails', () => {
     const account = buildAccount({
       accountType: 'rrsp',
       contributionRoom: 5000,
-      termYears: 1,
       annualIncomeForRrsp: 50000,
       contribution: {
         amount: 2000,
@@ -390,7 +368,7 @@ describe('getOverContributionDetails', () => {
         endMonth: 12,
       },
     })
-    const result = getOverContributionDetails(account)
+    const result = getOverContributionDetails(account, 1)
     expect(result.exceedsRoom).toBe(true)
   })
 })
@@ -400,7 +378,6 @@ describe('getContributionRoomResult', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 50000,
-      termYears: 5,
       contribution: {
         amount: 500,
         frequency: 'monthly',
@@ -408,7 +385,7 @@ describe('getContributionRoomResult', () => {
         endMonth: 60,
       },
     })
-    const result = getContributionRoomResult(account)
+    const result = getContributionRoomResult(account, 5)
     expect(result.availableRoom).toBe(85000)
     expect(result.projectedContributions).toBe(30000)
     expect(result.remainingRoom).toBe(55000)
@@ -417,7 +394,7 @@ describe('getContributionRoomResult', () => {
 
   it('returns -1 for non-registered account room values', () => {
     const account = buildAccount({ accountType: 'non-registered' })
-    const result = getContributionRoomResult(account)
+    const result = getContributionRoomResult(account, 10)
     expect(result.availableRoom).toBe(-1)
     expect(result.remainingRoom).toBe(-1)
   })
@@ -448,7 +425,6 @@ describe('getRemainingContributionRoomForGoal', () => {
     const account = buildAccount({
       accountType: 'tfsa',
       contributionRoom: 5000,
-      termYears: 1,
       contribution: {
         amount: 1000,
         frequency: 'monthly',

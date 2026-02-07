@@ -5,19 +5,20 @@ const clampMonth = (value: number, maxMonth: number) =>
   Math.min(Math.max(value, 1), maxMonth)
 
 /**
- * When the term changes, adjust the contribution start/end months
- * so they stay within the new total-months range.
+ * Adjust a single account's contribution start/end months
+ * when the global term changes.
  */
-export const adjustContributionRange = (
+export const adjustContributionRangeForTermChange = (
   account: AccountInput,
-  payload: AccountUpdatePayload,
-): AccountUpdatePayload => {
-  if (!payload.changes.termYears || !account.contribution) {
-    return payload
+  previousTermYears: number,
+  newTermYears: number,
+): AccountInput => {
+  if (!account.contribution) {
+    return account
   }
 
-  const previousTotalMonths = Math.max(Math.round(account.termYears * 12), 1)
-  const totalMonths = Math.max(Math.round(payload.changes.termYears * 12), 1)
+  const previousTotalMonths = Math.max(Math.round(previousTermYears * 12), 1)
+  const totalMonths = Math.max(Math.round(newTermYears * 12), 1)
   const startMonth = clampMonth(account.contribution.startMonth, totalMonths)
   const shouldExtendEndMonth =
     totalMonths > previousTotalMonths &&
@@ -31,17 +32,26 @@ export const adjustContributionRange = (
   )
 
   return {
-    ...payload,
-    changes: {
-      ...payload.changes,
-      contribution: {
-        ...account.contribution,
-        startMonth,
-        endMonth,
-      },
+    ...account,
+    contribution: {
+      ...account.contribution,
+      startMonth,
+      endMonth,
     },
   }
 }
+
+/**
+ * Adjust all accounts' contribution ranges when the global term changes.
+ */
+export const adjustAllAccountsForTermChange = (
+  accounts: AccountInput[],
+  previousTermYears: number,
+  newTermYears: number,
+): AccountInput[] =>
+  accounts.map((account) =>
+    adjustContributionRangeForTermChange(account, previousTermYears, newTermYears),
+  )
 
 /**
  * If the contribution frequency changes, ensure the timing value

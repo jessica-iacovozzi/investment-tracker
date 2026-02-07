@@ -1,14 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AccountInput } from '../types/investment'
 import type { InflationState } from '../types/inflation'
 import AccountCard from './AccountCard'
 
 const buildAccount = ({
-  termYears = 10,
   endMonth = 120,
 }: {
-  termYears?: number
   endMonth?: number
 } = {}): AccountInput => ({
   id: 'account-1',
@@ -16,7 +14,6 @@ const buildAccount = ({
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
-  termYears,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   contribution: {
@@ -33,64 +30,36 @@ const defaultInflationState: InflationState = {
 }
 
 describe('AccountCard', () => {
-  it('extends end month when term increases from the previous max', () => {
-    const handleUpdate = vi.fn()
-    const account = buildAccount({ termYears: 10, endMonth: 120 })
-    const { rerender } = render(
+  it('renders account name and delete button', () => {
+    const account = buildAccount()
+    render(
       <AccountCard
         account={account}
         allAccounts={[account]}
+        termYears={10}
         inflationState={defaultInflationState}
-        onUpdate={handleUpdate}
+        onUpdate={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
 
-    fireEvent.change(screen.getByLabelText('Term (years)'), {
-      target: { value: '11' },
-    })
+    expect(screen.getByText('Test Account')).toBeDefined()
+    expect(screen.getByRole('button', { name: /Delete Test Account account/ })).toBeDefined()
+  })
 
-    expect(handleUpdate).toHaveBeenLastCalledWith({
-      id: 'account-1',
-      changes: {
-        termYears: 11,
-        contribution: {
-          amount: 200,
-          frequency: 'monthly',
-          startMonth: 1,
-          endMonth: 132,
-        },
-      },
-    })
-
-    handleUpdate.mockClear()
-
-    const updatedAccount = buildAccount({ termYears: 11, endMonth: 132 })
-    rerender(
+  it('renders account form with termYears prop', () => {
+    const account = buildAccount()
+    const { container } = render(
       <AccountCard
-        account={updatedAccount}
-        allAccounts={[updatedAccount]}
+        account={account}
+        allAccounts={[account]}
+        termYears={10}
         inflationState={defaultInflationState}
-        onUpdate={handleUpdate}
+        onUpdate={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
 
-    fireEvent.change(screen.getByLabelText('Term (years)'), {
-      target: { value: '12' },
-    })
-
-    expect(handleUpdate).toHaveBeenLastCalledWith({
-      id: 'account-1',
-      changes: {
-        termYears: 12,
-        contribution: {
-          amount: 200,
-          frequency: 'monthly',
-          startMonth: 1,
-          endMonth: 144,
-        },
-      },
-    })
+    expect(container.querySelector('.account-form')).toBeTruthy()
   })
 })

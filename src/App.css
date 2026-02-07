@@ -909,6 +909,43 @@
   margin: 0;
 }
 
+/* Global Term Input */
+.global-term-input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.global-term-input label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.global-term-input input {
+  width: 80px;
+  background: rgba(15, 15, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem 0.6rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+}
+
+.global-term-input input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.global-term-input .field-help {
+  font-size: 0.75rem;
+  margin: 0;
+}
+
 @media (max-width: 720px) {
   .app__header-top {
     flex-direction: column;

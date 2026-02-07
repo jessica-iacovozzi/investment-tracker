@@ -48,7 +48,6 @@ export const getCombinedProjectedContributions = (
     const validAccounts = sameTypeAccounts.filter(account => {
       if (!account || typeof account !== 'object') return false
       if (!account.id || typeof account.id !== 'string') return false
-      if (typeof account.termYears !== 'number' || account.termYears < 0) return false
       return true
     })
 
@@ -171,6 +170,7 @@ export const getSharedFieldSeedValues = (
 export const getSharedAvailableRoom = (
   accounts: AccountInput[],
   accountType: AccountType,
+  termYears: number,
 ): number => {
   const sameTypeAccounts = getAccountsByType(accounts, accountType)
   if (sameTypeAccounts.length === 0) {
@@ -178,18 +178,13 @@ export const getSharedAvailableRoom = (
     return accountType === 'non-registered' ? -1 : 0
   }
 
-  // Find account with longest term among same-type accounts
-  const maxTermAccount = sameTypeAccounts.reduce((maxAcc, acc) =>
-    acc.termYears > maxAcc.termYears ? acc : maxAcc,
-  )
-
   // Get shared field values from most recent account
   const mostRecentAccount = getMostRecentAccountByType(accounts, accountType)
   const seedValues = mostRecentAccount ? getSharedFieldSeedValues(accounts, accountType, {
     excludeAccountId: mostRecentAccount.id,
   }) : {}
 
-  const baseAccount = { ...maxTermAccount, ...seedValues }
+  const baseAccount = { ...sameTypeAccounts[0], ...seedValues }
   
   // For tax-advantaged accounts, if no contribution room is defined, return 0
   // Non-registered accounts have unlimited room (-1)
@@ -197,7 +192,7 @@ export const getSharedAvailableRoom = (
     return 0
   }
   
-  const availableRoom = calculateAvailableRoom(baseAccount)
+  const availableRoom = calculateAvailableRoom(baseAccount, termYears)
   return availableRoom === Infinity ? -1 : availableRoom
 }
 
@@ -207,6 +202,7 @@ export const getSharedAvailableRoom = (
 const getSharedOverContributionDetails = (
   accounts: AccountInput[],
   accountType: AccountType,
+  termYears: number,
 ): OverContributionDetails => {
   if (!isTaxAdvantagedAccount(accountType)) {
     return { exceedsRoom: false, excessAmount: 0 }
@@ -217,17 +213,14 @@ const getSharedOverContributionDetails = (
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
-  const maxTermAccount = sameTypeAccounts.reduce((maxAcc, acc) =>
-    acc.termYears > maxAcc.termYears ? acc : maxAcc,
-  )
   const mostRecentAccount = getMostRecentAccountByType(accounts, accountType)
   const seedValues = mostRecentAccount
     ? getSharedFieldSeedValues(accounts, accountType, {
         excludeAccountId: mostRecentAccount.id,
       })
     : {}
-  const baseAccount = { ...maxTermAccount, ...seedValues }
-  const annualRooms = getAnnualContributionRoomLimits(baseAccount, baseAccount.termYears)
+  const baseAccount = { ...sameTypeAccounts[0], ...seedValues }
+  const annualRooms = getAnnualContributionRoomLimits(baseAccount, termYears)
 
   if (annualRooms.length === 0) {
     return { exceedsRoom: false, excessAmount: 0 }
@@ -266,6 +259,7 @@ const getSharedOverContributionDetails = (
 export const getAggregatedContributionSummary = (
   accounts: AccountInput[],
   accountType: AccountType,
+  termYears: number,
 ): AccountTypeContributionSummary => {
   const sameTypeAccounts = getAccountsByType(accounts, accountType)
   const sharedContributionRoom = getSharedContributionRoom(sameTypeAccounts, accountType)
@@ -273,7 +267,7 @@ export const getAggregatedContributionSummary = (
     sameTypeAccounts,
     accountType,
   )
-  const availableRoom = getSharedAvailableRoom(sameTypeAccounts, accountType)
+  const availableRoom = getSharedAvailableRoom(sameTypeAccounts, accountType, termYears)
   const remainingRoom =
     availableRoom === -1
       ? -1
@@ -282,6 +276,7 @@ export const getAggregatedContributionSummary = (
   const overContributionDetails = getSharedOverContributionDetails(
     sameTypeAccounts,
     accountType,
+    termYears,
   )
 
   return {

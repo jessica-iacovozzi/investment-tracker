@@ -6,6 +6,7 @@ import AccountListRow from './AccountListRow'
 type AccountListViewProps = {
   accounts: AccountInput[]
   allAccounts: AccountInput[]
+  termYears: number
   currentAge?: number
   inflationState: InflationState
   onUpdate: (payload: AccountUpdatePayload) => void
@@ -19,6 +20,7 @@ type AccountListViewProps = {
 function AccountListView({
   accounts,
   allAccounts,
+  termYears,
   currentAge,
   inflationState,
   onUpdate,
@@ -37,6 +39,7 @@ function AccountListView({
           key={account.id}
           account={account}
           allAccounts={allAccounts}
+          termYears={termYears}
           currentAge={currentAge}
           inflationState={inflationState}
           isExpanded={expandedId === account.id}

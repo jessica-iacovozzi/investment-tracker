@@ -47,7 +47,6 @@ export type AccountInput = {
   principal: number
   annualRatePercent: number
   compoundingFrequency: CompoundingFrequency
-  termYears: number
   contributionTiming: ContributionTiming
   contribution?: ContributionSchedule
   isLockedIn?: boolean

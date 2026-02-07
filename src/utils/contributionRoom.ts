@@ -53,7 +53,7 @@ export const calculateTotalProjectedContributions = (
  */
 export const getAnnualProjectedContributions = (
   account: AccountInput,
-  termYears = account.termYears,
+  termYears: number,
 ): number[] => {
   const totalYears = getValidatedTermYears(termYears)
   const annualContributions = Array.from({ length: totalYears }, () => 0)
@@ -123,7 +123,7 @@ export const getAnnualRoomIncrease = (account: AccountInput): number => {
  */
 export const getAnnualContributionRoomLimits = (
   account: AccountInput,
-  termYears = account.termYears,
+  termYears: number,
 ): number[] => {
   if (!isTaxAdvantagedAccount(account.accountType)) {
     return []
@@ -168,14 +168,14 @@ export const getAnnualContributionRoomLimits = (
  * Calculate available contribution room over the term.
  * Initial room + annual increases for each year of the term.
  */
-export const calculateAvailableRoom = (account: AccountInput): number => {
+export const calculateAvailableRoom = (account: AccountInput, termYears: number): number => {
   if (!isTaxAdvantagedAccount(account.accountType)) {
     return Infinity
   }
 
   // Defensive programming: ensure contributionRoom is a non-negative number
   const initialRoom = Math.max(0, account.contributionRoom ?? 0)
-  const termYears = Math.max(0, Math.floor(account.termYears))
+  const validTermYears = Math.max(0, Math.floor(termYears))
   const annualIncrease = getAnnualRoomIncrease(account)
 
   let totalRoom = initialRoom
@@ -184,7 +184,7 @@ export const calculateAvailableRoom = (account: AccountInput): number => {
     const lifetimeContributions = account.fhsaLifetimeContributions ?? 0
     const remainingLifetimeRoom = Math.max(0, FHSA_LIFETIME_LIMIT - lifetimeContributions)
 
-    for (let year = 1; year <= termYears; year++) {
+    for (let year = 1; year <= validTermYears; year++) {
       const yearlyIncrease = Math.min(
         annualIncrease,
         FHSA_MAX_ANNUAL_WITH_CARRYFORWARD,
@@ -196,7 +196,7 @@ export const calculateAvailableRoom = (account: AccountInput): number => {
     return Math.min(totalRoom, remainingLifetimeRoom)
   }
 
-  totalRoom += annualIncrease * termYears
+  totalRoom += annualIncrease * validTermYears
 
   return totalRoom
 }
@@ -204,8 +204,8 @@ export const calculateAvailableRoom = (account: AccountInput): number => {
 /**
  * Calculate remaining contribution room after projected contributions.
  */
-export const calculateRemainingRoom = (account: AccountInput): number => {
-  const availableRoom = calculateAvailableRoom(account)
+export const calculateRemainingRoom = (account: AccountInput, termYears: number): number => {
+  const availableRoom = calculateAvailableRoom(account, termYears)
   const projectedContributions = calculateTotalProjectedContributions(account)
 
   if (availableRoom === Infinity) {
@@ -230,12 +230,13 @@ export const getOverContributionBuffer = (account: AccountInput): number => {
  */
 export const getOverContributionDetails = (
   account: AccountInput,
+  termYears: number,
 ): OverContributionDetails => {
   if (!isTaxAdvantagedAccount(account.accountType)) {
     return { exceedsRoom: false, excessAmount: 0 }
   }
 
-  const annualRooms = getAnnualContributionRoomLimits(account)
+  const annualRooms = getAnnualContributionRoomLimits(account, termYears)
   const annualContributions = getAnnualProjectedContributions(account, annualRooms.length)
 
   let cumulativeRoom = 0
@@ -252,7 +253,7 @@ export const getOverContributionDetails = (
 
   const excessAmount = Math.round((cumulativeContributions - cumulativeRoom) * 100) / 100
   const overContributionTiming = findOverContributionTimingByYear(account, annualRooms)
-  const monthsOfExcess = calculateMonthsOfExcess(account, overContributionTiming)
+  const monthsOfExcess = calculateMonthsOfExcess(termYears, overContributionTiming)
   const estimatedPenalty = Math.round(excessAmount * 0.01 * monthsOfExcess * 100) / 100
 
   return {
@@ -312,10 +313,10 @@ const findOverContributionTimingByYear = (
  * Calculate how many months the excess contribution would be in effect.
  */
 const calculateMonthsOfExcess = (
-  account: AccountInput,
+  termYears: number,
   overContributionTiming: { year: number; month: number },
 ): number => {
-  const totalMonths = account.termYears * 12
+  const totalMonths = termYears * 12
   const overContributionMonth =
     (overContributionTiming.year - 1) * 12 + overContributionTiming.month
   return Math.max(0, totalMonths - overContributionMonth + 1)
@@ -326,11 +327,12 @@ const calculateMonthsOfExcess = (
  */
 export const getContributionRoomResult = (
   account: AccountInput,
+  termYears: number,
 ): ContributionRoomResult => {
-  const availableRoom = calculateAvailableRoom(account)
+  const availableRoom = calculateAvailableRoom(account, termYears)
   const projectedContributions = calculateTotalProjectedContributions(account)
-  const remainingRoom = calculateRemainingRoom(account)
-  const overContributionDetails = getOverContributionDetails(account)
+  const remainingRoom = calculateRemainingRoom(account, termYears)
+  const overContributionDetails = getOverContributionDetails(account, termYears)
 
   return {
     availableRoom: availableRoom === Infinity ? -1 : availableRoom,
@@ -352,8 +354,7 @@ export const getRemainingContributionRoomForGoal = (
     return Infinity
   }
 
-  const accountWithTerm = { ...account, termYears }
-  const remainingRoom = calculateRemainingRoom(accountWithTerm)
+  const remainingRoom = calculateRemainingRoom(account, termYears)
 
   return remainingRoom === Infinity ? Infinity : Math.max(0, remainingRoom)
 }

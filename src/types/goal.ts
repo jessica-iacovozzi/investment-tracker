@@ -10,7 +10,6 @@ export type GoalState = {
   calculationType: CalculationType
   contributionFrequency: ContributionFrequency
   contributionAmount?: number
-  termYears?: number
   allocationStrategy: AllocationStrategy
 }
 
@@ -39,6 +38,5 @@ export const DEFAULT_GOAL_STATE: GoalState = {
   targetBalance: 1000000,
   calculationType: 'contribution',
   contributionFrequency: 'monthly',
-  termYears: 30,
   allocationStrategy: 'proportional',
 }

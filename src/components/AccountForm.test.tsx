@@ -23,7 +23,6 @@ const buildAccount = (overrides: BuildAccountOverrides = {}): AccountInput => {
     principal: 10000,
     annualRatePercent: 5,
     compoundingFrequency: 'monthly',
-    termYears: 10,
     contributionTiming: timing,
     accountType,
     contribution: {
@@ -39,7 +38,7 @@ const buildAccount = (overrides: BuildAccountOverrides = {}): AccountInput => {
 describe('AccountForm', () => {
   it('filters timing options based on frequency', () => {
     const { container, rerender } = render(
-      <AccountForm account={buildAccount({ frequency: 'monthly' })} onUpdate={vi.fn()} />,
+      <AccountForm account={buildAccount({ frequency: 'monthly' })} termYears={10} onUpdate={vi.fn()} />,
     )
 
     const timingSelect = within(container).getByLabelText('Contribution timing')
@@ -47,7 +46,7 @@ describe('AccountForm', () => {
     expect(timingSelect.textContent).toContain('End of month')
 
     rerender(
-      <AccountForm account={buildAccount({ frequency: 'quarterly' })} onUpdate={vi.fn()} />,
+      <AccountForm account={buildAccount({ frequency: 'quarterly' })} termYears={10} onUpdate={vi.fn()} />,
     )
 
     const updatedTimingSelect = within(container).getByLabelText(
@@ -62,6 +61,7 @@ describe('AccountForm', () => {
     const { container } = render(
       <AccountForm
         account={buildAccount({ frequency: 'monthly', timing: 'beginning-of-month' })}
+        termYears={10}
         onUpdate={handleUpdate}
       />,
     )
@@ -86,7 +86,7 @@ describe('AccountForm', () => {
 
   it('has info tooltip on timing label', () => {
     const { container } = render(
-      <AccountForm account={buildAccount()} onUpdate={vi.fn()} />,
+      <AccountForm account={buildAccount()} termYears={10} onUpdate={vi.fn()} />,
     )
 
     const timingLabel = container.querySelector('.field-label--with-info')
@@ -97,7 +97,7 @@ describe('AccountForm', () => {
   describe('Account Type', () => {
     it('renders account type dropdown with all options', () => {
       const { container } = render(
-        <AccountForm account={buildAccount()} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount()} termYears={10} onUpdate={vi.fn()} />,
       )
 
       const accountTypeSelect = within(container).getByLabelText('Account type')
@@ -110,7 +110,7 @@ describe('AccountForm', () => {
 
     it('shows contribution room field for TFSA', () => {
       const { container } = render(
-        <AccountForm account={buildAccount({ accountType: 'tfsa' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'tfsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Contribution room/)).toBeTruthy()
@@ -118,7 +118,7 @@ describe('AccountForm', () => {
 
     it('hides contribution room field for non-registered accounts', () => {
       const { container } = render(
-        <AccountForm account={buildAccount({ accountType: 'non-registered' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'non-registered' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Contribution room/)).toBeNull()
@@ -126,13 +126,13 @@ describe('AccountForm', () => {
 
     it('shows annual income field only for RRSP', () => {
       const { container, rerender } = render(
-        <AccountForm account={buildAccount({ accountType: 'rrsp' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'rrsp' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Annual income/)).toBeTruthy()
 
       rerender(
-        <AccountForm account={buildAccount({ accountType: 'tfsa' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'tfsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Annual income/)).toBeNull()
@@ -140,13 +140,13 @@ describe('AccountForm', () => {
 
     it('shows lifetime contributions field only for FHSA', () => {
       const { container, rerender } = render(
-        <AccountForm account={buildAccount({ accountType: 'fhsa' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'fhsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Lifetime contributions/)).toBeTruthy()
 
       rerender(
-        <AccountForm account={buildAccount({ accountType: 'tfsa' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'tfsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Lifetime contributions/)).toBeNull()
@@ -154,13 +154,13 @@ describe('AccountForm', () => {
 
     it('shows custom annual room increase field only for TFSA', () => {
       const { container, rerender } = render(
-        <AccountForm account={buildAccount({ accountType: 'tfsa' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'tfsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Custom annual room/)).toBeTruthy()
 
       rerender(
-        <AccountForm account={buildAccount({ accountType: 'rrsp' })} onUpdate={vi.fn()} />,
+        <AccountForm account={buildAccount({ accountType: 'rrsp' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
       expect(within(container).queryByLabelText(/Custom annual room/)).toBeNull()
@@ -173,7 +173,7 @@ describe('AccountForm', () => {
         customAnnualRoomIncrease: 7000,
       })
       const { container, rerender } = render(
-        <AccountForm account={initialAccount} onUpdate={vi.fn()} />,
+        <AccountForm account={initialAccount} termYears={10} onUpdate={vi.fn()} />,
       )
       const contributionInput = within(container).getByLabelText(/Contribution room/) as HTMLInputElement
       const customRoomInput = within(container).getByLabelText(/Custom annual room/) as HTMLInputElement
@@ -188,6 +188,7 @@ describe('AccountForm', () => {
             contributionRoom: 15000,
             customAnnualRoomIncrease: 7500,
           }}
+          termYears={10}
           onUpdate={vi.fn()}
         />,
       )
@@ -205,6 +206,7 @@ describe('AccountForm', () => {
             contributionRoom: 12000,
             customAnnualRoomIncrease: 7000,
           })}
+          termYears={10}
           onUpdate={handleUpdate}
         />,
       )
@@ -238,6 +240,7 @@ describe('AccountForm', () => {
             accountType: 'rrsp',
             annualIncomeForRrsp: 90000,
           })}
+          termYears={10}
           onUpdate={handleUpdate}
         />,
       )
@@ -266,7 +269,7 @@ describe('AccountForm', () => {
       
       accountTypes.forEach((accountType) => {
         const { container, unmount } = render(
-          <AccountForm account={buildAccount({ accountType })} onUpdate={vi.fn()} />,
+          <AccountForm account={buildAccount({ accountType })} termYears={10} onUpdate={vi.fn()} />,
         )
         expect(within(container).queryByLabelText(/Locked-in account/)).toBeNull()
         unmount()
@@ -276,7 +279,7 @@ describe('AccountForm', () => {
     it('calls onUpdate with new account type when changed', () => {
       const handleUpdate = vi.fn()
       const { container } = render(
-        <AccountForm account={buildAccount({ accountType: 'non-registered' })} onUpdate={handleUpdate} />,
+        <AccountForm account={buildAccount({ accountType: 'non-registered' })} termYears={10} onUpdate={handleUpdate} />,
       )
 
       fireEvent.change(within(container).getByLabelText('Account type'), {

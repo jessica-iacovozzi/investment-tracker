@@ -21,7 +21,6 @@ const buildAccount = (
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
-  termYears: 10,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   ...overrides,
@@ -114,31 +113,29 @@ describe('getSharedContributionRoom', () => {
 describe('getSharedAvailableRoom', () => {
   it('returns 0 when no accounts of type exist', () => {
     const accounts = [buildAccount({ id: '1', accountType: 'rrsp' })]
-    expect(getSharedAvailableRoom(accounts, 'tfsa')).toBe(0)
+    expect(getSharedAvailableRoom(accounts, 'tfsa', 10)).toBe(0)
   })
 
-  it('calculates available room using account with longest term', () => {
+  it('calculates available room using global term', () => {
     const accounts = [
       buildAccount({
         id: '1',
         accountType: 'tfsa',
         contributionRoom: 50000,
-        termYears: 5,
       }),
       buildAccount({
         id: '2',
         accountType: 'tfsa',
         contributionRoom: 50000,
-        termYears: 10,
       }),
     ]
-    const result = getSharedAvailableRoom(accounts, 'tfsa')
+    const result = getSharedAvailableRoom(accounts, 'tfsa', 10)
     expect(result).toBe(120000)
   })
 
   it('returns -1 for non-registered accounts', () => {
     const accounts = [buildAccount({ id: '1', accountType: 'non-registered' })]
-    expect(getSharedAvailableRoom(accounts, 'non-registered')).toBe(-1)
+    expect(getSharedAvailableRoom(accounts, 'non-registered', 10)).toBe(-1)
   })
 })
 
@@ -149,18 +146,16 @@ describe('getAggregatedContributionSummary', () => {
         id: '1',
         accountType: 'tfsa',
         contributionRoom: 50000,
-        termYears: 5,
         contribution: { amount: 500, frequency: 'monthly', startMonth: 1, endMonth: 60 },
       }),
       buildAccount({
         id: '2',
         accountType: 'tfsa',
         contributionRoom: 50000,
-        termYears: 5,
         contribution: { amount: 300, frequency: 'monthly', startMonth: 1, endMonth: 60 },
       }),
     ]
-    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const result = getAggregatedContributionSummary(accounts, 'tfsa', 5)
 
     expect(result.accountType).toBe('tfsa')
     expect(result.sharedContributionRoom).toBe(50000)
@@ -176,18 +171,16 @@ describe('getAggregatedContributionSummary', () => {
         id: '1',
         accountType: 'tfsa',
         contributionRoom: 20000,
-        termYears: 1,
         contribution: { amount: 1500, frequency: 'monthly', startMonth: 1, endMonth: 12 },
       }),
       buildAccount({
         id: '2',
         accountType: 'tfsa',
         contributionRoom: 20000,
-        termYears: 1,
         contribution: { amount: 1500, frequency: 'monthly', startMonth: 1, endMonth: 12 },
       }),
     ]
-    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const result = getAggregatedContributionSummary(accounts, 'tfsa', 1)
 
     expect(result.isOverContributing).toBe(true)
     expect(result.overContributionDetails.exceedsRoom).toBe(true)
@@ -196,7 +189,7 @@ describe('getAggregatedContributionSummary', () => {
 
   it('returns empty summary for non-existent account type', () => {
     const accounts = [buildAccount({ id: '1', accountType: 'rrsp' })]
-    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const result = getAggregatedContributionSummary(accounts, 'tfsa', 10)
 
     expect(result.accountCount).toBe(0)
     expect(result.accountIds).toEqual([])
@@ -427,7 +420,7 @@ describe('Edge Cases', () => {
       buildAccount({ id: '1', accountType: 'tfsa' }),
       buildAccount({ id: '2', accountType: 'tfsa' }),
     ]
-    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const result = getAggregatedContributionSummary(accounts, 'tfsa', 10)
     expect(result.sharedContributionRoom).toBe(0)
     expect(result.totalProjectedContributions).toBe(0)
     expect(result.remainingRoom).toBe(0)
@@ -443,7 +436,7 @@ describe('Edge Cases', () => {
       })
     )
     const start = performance.now()
-    const result = getAggregatedContributionSummary(accounts, 'tfsa')
+    const result = getAggregatedContributionSummary(accounts, 'tfsa', 10)
     const end = performance.now()
     expect(end - start).toBeLessThan(100) // Should complete in less than 100ms
     expect(result.accountCount).toBe(50)

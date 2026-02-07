@@ -10,7 +10,6 @@ const buildAccount = (): AccountInput => ({
   principal: 10000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
-  termYears: 10,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   contribution: {
@@ -31,6 +30,7 @@ const defaultProps = () => {
   return {
     account,
     allAccounts: [account],
+    termYears: 10,
     inflationState: defaultInflationState,
     isExpanded: false,
     onToggle: vi.fn(),
@@ -55,11 +55,11 @@ describe('AccountListRow', () => {
     expect(screen.getByText('Principal')).toBeDefined()
   })
 
-  it('renders projected balance and returns metrics', () => {
+  it('renders annual return and projected metrics', () => {
     render(<AccountListRow {...defaultProps()} />)
 
+    expect(screen.getByText('Return')).toBeDefined()
     expect(screen.getByText('Projected')).toBeDefined()
-    expect(screen.getByText('Returns')).toBeDefined()
   })
 
   it('sets aria-expanded to false when collapsed', () => {

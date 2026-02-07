@@ -8,7 +8,6 @@ const baseAccount: AccountInput = {
   principal: 10000,
   annualRatePercent: 6,
   compoundingFrequency: 'monthly',
-  termYears: 1,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   contribution: {
@@ -21,7 +20,7 @@ const baseAccount: AccountInput = {
 
 describe('buildProjection', () => {
   it('grows balance over time with contributions', () => {
-    const result = buildProjection(baseAccount)
+    const result = buildProjection(baseAccount, 1)
 
     expect(result.points).toHaveLength(13)
     expect(result.totals.totalContributions).toBeGreaterThan(10000)
@@ -40,7 +39,7 @@ describe('buildProjection', () => {
         endMonth: 6,
       },
     }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 1)
 
     expect(result.points[6].totalContributions).toBeGreaterThan(
       result.points[7].totalContributions - 1,
@@ -52,7 +51,7 @@ describe('buildProjection', () => {
 
   it('handles no contribution schedule', () => {
     const account = { ...baseAccount, contribution: undefined }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 1)
 
     expect(result.totals.totalContributions).toBe(account.principal)
   })
@@ -68,7 +67,7 @@ describe('buildProjection', () => {
         endMonth: 1,
       },
     }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 1)
 
     expect(result.points[1].totalContributions).toBe(
       account.principal + 200,
@@ -80,7 +79,7 @@ describe('buildProjection', () => {
       ...baseAccount,
       contributionTiming: 'beginning-of-month',
     }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 1)
 
     expect(result.points[1].totalContributions).toBe(
       account.principal + 100,
@@ -101,7 +100,7 @@ describe('buildProjection', () => {
         endMonth: 12,
       },
     }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 1)
 
     expect(result.points[11].totalContributions).toBe(account.principal)
     expect(result.points[12].totalContributions).toBe(
@@ -112,7 +111,6 @@ describe('buildProjection', () => {
   it('adds recurring end of year contributions across multiple years', () => {
     const account: AccountInput = {
       ...baseAccount,
-      termYears: 2,
       contributionTiming: 'end-of-year',
       contribution: {
         amount: 100,
@@ -121,7 +119,7 @@ describe('buildProjection', () => {
         endMonth: 24,
       },
     }
-    const result = buildProjection(account)
+    const result = buildProjection(account, 2)
 
     expect(result.points[12].totalContributions).toBe(
       account.principal + 100,
@@ -135,11 +133,11 @@ describe('buildProjection', () => {
     const monthlyResult = buildProjection({
       ...baseAccount,
       compoundingFrequency: 'monthly',
-    })
+    }, 1)
     const dailyResult = buildProjection({
       ...baseAccount,
       compoundingFrequency: 'daily',
-    })
+    }, 1)
 
     expect(dailyResult.points[12].balance).not.toBe(
       monthlyResult.points[12].balance,

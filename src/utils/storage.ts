@@ -4,6 +4,7 @@ import type { InflationState } from '../types/inflation'
 import { DEFAULT_INFLATION_STATE } from '../types/inflation'
 import type { ViewPreference } from '../types/investment'
 
+const TERM_YEARS_STORAGE_KEY = 'investment-tracker-term-years'
 const GOAL_STORAGE_KEY = 'investment-tracker-goal'
 const INFLATION_STORAGE_KEY = 'investment-tracker-inflation'
 const VIEW_PREFERENCE_STORAGE_KEY = 'investmentTracker_viewPreference'
@@ -27,6 +28,71 @@ export const isLocalStorageAvailable = (): boolean => {
     console.warn('Local storage is unavailable.', error)
     return false
   }
+}
+
+const DEFAULT_TERM_YEARS = 10
+const MIN_TERM_YEARS = 1
+const MAX_TERM_YEARS = 100
+
+/**
+ * Load global term years from localStorage.
+ */
+export const loadTermYears = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): number => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return DEFAULT_TERM_YEARS
+  }
+
+  const storedValue = window.localStorage.getItem(TERM_YEARS_STORAGE_KEY)
+  if (!storedValue) {
+    return DEFAULT_TERM_YEARS
+  }
+
+  const parsed = Number(storedValue)
+  if (
+    !Number.isFinite(parsed) ||
+    parsed < MIN_TERM_YEARS ||
+    parsed > MAX_TERM_YEARS
+  ) {
+    return DEFAULT_TERM_YEARS
+  }
+
+  return parsed
+}
+
+/**
+ * Save global term years to localStorage.
+ */
+export const saveTermYears = ({
+  termYears,
+  storageAvailable,
+}: {
+  termYears: number
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.setItem(TERM_YEARS_STORAGE_KEY, String(termYears))
+}
+
+/**
+ * Clear global term years from localStorage.
+ */
+export const clearTermYears = ({
+  storageAvailable,
+}: {
+  storageAvailable: boolean
+}): void => {
+  if (typeof window === 'undefined' || !storageAvailable) {
+    return
+  }
+
+  window.localStorage.removeItem(TERM_YEARS_STORAGE_KEY)
 }
 
 /**

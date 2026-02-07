@@ -17,7 +17,6 @@ const createMockAccount = (
   principal: 10000,
   annualRatePercent: 7,
   compoundingFrequency: 'monthly',
-  termYears: 10,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   ...overrides,
@@ -238,6 +237,7 @@ describe('calculateAllocation', () => {
       totalContribution: 1000,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result).toEqual([])
   })
@@ -248,6 +248,7 @@ describe('calculateAllocation', () => {
       totalContribution: 0,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result).toEqual([])
   })
@@ -262,6 +263,7 @@ describe('calculateAllocation', () => {
       totalContribution: 1000,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result).toHaveLength(2)
     expect(result[0].suggestedContribution).toBe(750)
@@ -278,6 +280,7 @@ describe('calculateAllocation', () => {
       totalContribution: 1000,
       strategy: 'equal',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result).toHaveLength(2)
     expect(result[0].suggestedContribution).toBe(500)
@@ -294,6 +297,7 @@ describe('calculateAllocation', () => {
       totalContribution: 1000,
       strategy: 'highest-return',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result).toHaveLength(2)
     const highestReturn = result.find((a) => a.annualRatePercent === 8)
@@ -310,6 +314,7 @@ describe('calculateAllocation', () => {
       totalContribution: 1000,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result[0].suggestedContribution).toBe(500)
     expect(result[1].suggestedContribution).toBe(500)
@@ -329,6 +334,7 @@ describe('calculateAllocation', () => {
       totalContribution: 500,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result[0].currentContribution).toBe(200)
     expect(result[0].additionalContribution).toBe(300)
@@ -348,6 +354,7 @@ describe('calculateAllocation', () => {
       totalContribution: 500,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result[0].currentContribution).toBe(600)
     expect(result[0].additionalContribution).toBe(0)
@@ -367,6 +374,7 @@ describe('calculateAllocation', () => {
       totalContribution: 200,
       strategy: 'proportional',
       targetFrequency: 'monthly',
+      termYears: 10,
     })
     expect(result[0].currentContribution).toBe(100)
     expect(result[0].additionalContribution).toBe(100)
@@ -429,7 +437,6 @@ describe('calculateAllocation with contribution room', () => {
         accountType: 'tfsa',
         contributionRoom: 5000,
         customAnnualRoomIncrease: 0,
-        termYears: 2,
       }),
     ]
     const result = calculateAllocation({

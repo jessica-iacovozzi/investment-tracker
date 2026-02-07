@@ -8,7 +8,7 @@ import { getContributionRoomResult, calculateTotalProjectedContributions } from 
 import { isTaxAdvantagedAccount } from '../constants/accountTypes'
 import { ACCOUNT_TYPE_LABELS } from '../constants/accountTypes'
 import { getAggregatedContributionSummary, getAccountsByType } from '../utils/sharedContributionRoom'
-import { adjustContributionRange, normalizeContributionTiming } from '../utils/accountCardHelpers'
+import { normalizeContributionTiming } from '../utils/accountCardHelpers'
 import AccountChart from './AccountChart'
 import AccountForm from './AccountForm'
 import AccountSummary from './AccountSummary'
@@ -16,6 +16,7 @@ import AccountSummary from './AccountSummary'
 type AccountListRowProps = {
   account: AccountInput
   allAccounts: AccountInput[]
+  termYears: number
   currentAge?: number
   inflationState: InflationState
   isExpanded: boolean
@@ -31,6 +32,7 @@ type AccountListRowProps = {
 function AccountListRow({
   account,
   allAccounts,
+  termYears,
   currentAge,
   inflationState,
   isExpanded,
@@ -40,33 +42,33 @@ function AccountListRow({
 }: AccountListRowProps) {
   const projection = useMemo(() => {
     try {
-      const baseProjection = buildProjection(account)
+      const baseProjection = buildProjection(account, termYears)
       if (inflationState.isEnabled) {
         return applyInflationToProjection(
           baseProjection,
           inflationState.annualRatePercent,
-          account.termYears,
+          termYears,
         )
       }
       return baseProjection
     } catch {
       return null
     }
-  }, [account, inflationState])
+  }, [account, termYears, inflationState])
 
   const contributionRoomResult = useMemo(() => {
     if (!isTaxAdvantagedAccount(account.accountType)) {
       return undefined
     }
-    return getContributionRoomResult(account)
-  }, [account])
+    return getContributionRoomResult(account, termYears)
+  }, [account, termYears])
 
   const aggregatedSummary: AccountTypeContributionSummary | undefined = useMemo(() => {
     if (!isTaxAdvantagedAccount(account.accountType)) {
       return undefined
     }
-    return getAggregatedContributionSummary(allAccounts, account.accountType)
-  }, [allAccounts, account.accountType])
+    return getAggregatedContributionSummary(allAccounts, account.accountType, termYears)
+  }, [allAccounts, account.accountType, termYears])
 
   const thisAccountContributions = useMemo(() => {
     return calculateTotalProjectedContributions(account)
@@ -77,8 +79,7 @@ function AccountListRow({
   }, [allAccounts, account.accountType])
 
   const handleUpdate = (payload: AccountUpdatePayload) => {
-    const adjustedPayload = adjustContributionRange(account, payload)
-    const normalizedPayload = normalizeContributionTiming(account, adjustedPayload)
+    const normalizedPayload = normalizeContributionTiming(account, payload)
     onUpdate(normalizedPayload)
   }
 
@@ -101,12 +102,6 @@ function AccountListRow({
       : projection.totals.finalBalance
     : 0
 
-  const returnsValue = projection
-    ? inflationState.isEnabled && projection.totals.realTotalReturns !== undefined
-      ? projection.totals.realTotalReturns
-      : projection.totals.totalReturns
-    : 0
-
   return (
     <div
       className={`account-list-row${isExpanded ? ' account-list-row--expanded' : ''}`}
@@ -125,15 +120,13 @@ function AccountListRow({
           <span className="account-list-row__metric-value">{principalDisplay}</span>
         </span>
         <span className="account-list-row__metric">
+          <span className="account-list-row__metric-label">Return</span>
+          <span className="account-list-row__metric-value">{account.annualRatePercent}%</span>
+        </span>
+        <span className="account-list-row__metric">
           <span className="account-list-row__metric-label">Projected</span>
           <span className="account-list-row__metric-value">
             {projection ? formatCurrency(balanceValue) : 'Error'}
-          </span>
-        </span>
-        <span className="account-list-row__metric">
-          <span className="account-list-row__metric-label">Returns</span>
-          <span className="account-list-row__metric-value">
-            {projection ? formatCurrency(returnsValue) : 'Error'}
           </span>
         </span>
         <span className="account-list-row__chevron" aria-hidden="true">
@@ -158,6 +151,7 @@ function AccountListRow({
             <div className="account-list-row__detail-content">
               <AccountForm
                 account={account}
+                termYears={termYears}
                 onUpdate={handleUpdate}
                 sameTypeAccountCount={sameTypeAccountCount}
                 allAccounts={allAccounts}
@@ -165,7 +159,7 @@ function AccountListRow({
               <AccountSummary
                 totals={projection.totals}
                 currentAge={currentAge}
-                termYears={account.termYears}
+                termYears={termYears}
                 inflationEnabled={inflationState.isEnabled}
                 accountType={account.accountType}
                 contributionRoomResult={contributionRoomResult}

@@ -73,7 +73,7 @@ describe('GoalInputPanel', () => {
     expect(handleUpdate).toHaveBeenCalledWith({ calculationType: 'term' })
   })
 
-  it('shows term input when calculating contribution', () => {
+  it('shows frequency selector when calculating contribution', () => {
     render(
       <GoalInputPanel
         goalState={createGoalState({ calculationType: 'contribution' })}
@@ -83,7 +83,7 @@ describe('GoalInputPanel', () => {
       />
     )
 
-    expect(screen.getByLabelText('Term (years)')).toBeTruthy()
+    expect(screen.getByLabelText('Frequency')).toBeTruthy()
   })
 
   it('shows contribution input when calculating term', () => {

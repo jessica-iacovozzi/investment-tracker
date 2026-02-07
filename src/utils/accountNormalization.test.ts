@@ -8,7 +8,6 @@ const baseAccount: AccountInput = {
   principal: 1000,
   annualRatePercent: 5,
   compoundingFrequency: 'monthly',
-  termYears: 1,
   contributionTiming: 'end-of-month',
   accountType: 'non-registered',
   contribution: {

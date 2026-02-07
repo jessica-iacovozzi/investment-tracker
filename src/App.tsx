@@ -3,6 +3,7 @@ import AccountCard from './components/AccountCard'
 import AccountListView from './components/AccountListView'
 import AllocationSuggestions from './components/AllocationSuggestions'
 import CurrentAgeInput from './components/CurrentAgeInput'
+import GlobalTermInput from './components/GlobalTermInput'
 import GoalInputPanel from './components/GoalInputPanel'
 // import GoalModeToggle from './components/GoalModeToggle'
 import GoalProgressBar from './components/GoalProgressBar'
@@ -18,6 +19,9 @@ import { formatCurrency } from './utils/formatters'
 import { buildProjection } from './utils/projections'
 import {
   isLocalStorageAvailable,
+  loadTermYears,
+  saveTermYears,
+  clearTermYears,
   loadGoalState,
   saveGoalState,
   clearGoalState,
@@ -37,6 +41,7 @@ import type { AccountInput, AccountUpdatePayload, ProjectionTotals, ViewPreferen
 import type { GoalState, GoalCalculationResult } from './types/goal'
 import type { InflationState } from './types/inflation'
 import { applyInflationToTotals } from './utils/inflation'
+import { adjustAllAccountsForTermChange } from './utils/accountCardHelpers'
 import InflationControls from './components/InflationControls'
 import './App.css'
 
@@ -48,8 +53,7 @@ const buildId = () => {
   return `account-${Date.now()}-${Math.round(Math.random() * 1000)}`
 }
 
-const buildNewAccount = (index: number): AccountInput => {
-  const termYears = 10
+const buildNewAccount = (index: number, termYears: number): AccountInput => {
   const totalMonths = termYears * 12
 
   return {
@@ -58,7 +62,6 @@ const buildNewAccount = (index: number): AccountInput => {
     principal: 12000,
     annualRatePercent: 6.5,
     compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
-    termYears,
     contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
     accountType: 'non-registered',
     contribution: {
@@ -70,7 +73,7 @@ const buildNewAccount = (index: number): AccountInput => {
   }
 }
 
-const seedAccounts = (): AccountInput[] =>
+const seedAccounts = (termYears: number): AccountInput[] =>
   import.meta.env.PROD
     ? []
     : [
@@ -80,14 +83,13 @@ const seedAccounts = (): AccountInput[] =>
           principal: 18500,
           annualRatePercent: 7.2,
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
-          termYears: 12,
           contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
           accountType: 'non-registered',
           contribution: {
             amount: 300,
             frequency: 'monthly',
             startMonth: 1,
-            endMonth: 144,
+            endMonth: termYears * 12,
           },
         },
         {
@@ -96,14 +98,13 @@ const seedAccounts = (): AccountInput[] =>
           principal: 9200,
           annualRatePercent: 6.1,
           compoundingFrequency: DEFAULT_COMPOUNDING_FREQUENCY,
-          termYears: 15,
           contributionTiming: DEFAULT_CONTRIBUTION_TIMING,
           accountType: 'non-registered',
           contribution: {
             amount: 500,
             frequency: 'quarterly',
             startMonth: 1,
-            endMonth: 180,
+            endMonth: termYears * 12,
           },
         },
       ]
@@ -160,26 +161,26 @@ const clearCurrentAge = ({ storageAvailable }: { storageAvailable: boolean }) =>
   window.localStorage.removeItem(AGE_STORAGE_KEY)
 }
 
-const loadAccounts = ({ storageAvailable }: { storageAvailable: boolean }) => {
+const loadAccounts = ({ storageAvailable, termYears }: { storageAvailable: boolean; termYears: number }) => {
   if (typeof window === 'undefined' || !storageAvailable) {
-    return normalizeAccounts(seedAccounts())
+    return normalizeAccounts(seedAccounts(termYears))
   }
 
   const storedValue = window.localStorage.getItem(STORAGE_KEY)
   if (!storedValue) {
-    return normalizeAccounts(seedAccounts())
+    return normalizeAccounts(seedAccounts(termYears))
   }
 
   try {
     const parsed = JSON.parse(storedValue) as AccountInput[]
     if (!parsed.length) {
-      return normalizeAccounts(seedAccounts())
+      return normalizeAccounts(seedAccounts(termYears))
     }
 
     return normalizeAccounts(parsed)
   } catch (error) {
     console.warn('Failed to load saved accounts.', error)
-    return normalizeAccounts(seedAccounts())
+    return normalizeAccounts(seedAccounts(termYears))
   }
 }
 
@@ -221,8 +222,11 @@ const updateAccount = ({
 
 function App() {
   const [storageAvailable] = useState(isLocalStorageAvailable)
+  const [termYears, setTermYears] = useState<number>(() =>
+    loadTermYears({ storageAvailable }),
+  )
   const [accounts, setAccounts] = useState<AccountInput[]>(() =>
-    loadAccounts({ storageAvailable }),
+    loadAccounts({ storageAvailable, termYears: loadTermYears({ storageAvailable }) }),
   )
   const [goalState, setGoalState] = useState<GoalState>(() =>
     loadGoalState({ storageAvailable }),
@@ -245,6 +249,10 @@ function App() {
   useEffect(() => {
     saveAccounts({ accounts, storageAvailable })
   }, [accounts, storageAvailable])
+
+  useEffect(() => {
+    saveTermYears({ termYears, storageAvailable })
+  }, [termYears, storageAvailable])
 
   useEffect(() => {
     saveGoalState({ goalState, storageAvailable })
@@ -270,7 +278,12 @@ function App() {
   }
 
   const handleAddAccount = () => {
-    setAccounts((prev) => [...prev, buildNewAccount(prev.length + 1)])
+    setAccounts((prev) => [...prev, buildNewAccount(prev.length + 1, termYears)])
+  }
+
+  const handleTermChange = (newTermYears: number) => {
+    setAccounts((prev) => adjustAllAccountsForTermChange(prev, termYears, newTermYears))
+    setTermYears(newTermYears)
   }
 
   const handleResetAccounts = () => {
@@ -281,11 +294,14 @@ function App() {
       return
     }
     clearAccounts({ storageAvailable })
+    clearTermYears({ storageAvailable })
     clearGoalState({ storageAvailable })
     clearCurrentAge({ storageAvailable })
     clearInflationState({ storageAvailable })
     clearViewPreference({ storageAvailable })
-    setAccounts(normalizeAccounts(seedAccounts()))
+    const defaultTermYears = loadTermYears({ storageAvailable: false })
+    setTermYears(defaultTermYears)
+    setAccounts(normalizeAccounts(seedAccounts(defaultTermYears)))
     setGoalState(loadGoalState({ storageAvailable: false }))
     setCurrentAge(loadCurrentAge({ storageAvailable: false }))
     setInflationState(loadInflationState({ storageAvailable: false }))
@@ -307,15 +323,10 @@ function App() {
     setInflationState((prev) => ({ ...prev, ...updates }))
   }
 
-  const maxTermYears = useMemo(
-    () => Math.max(...accounts.map((a) => a.termYears), 0),
-    [accounts],
-  )
-
   const grandTotals: ProjectionTotals = useMemo(() => {
     const nominalTotals: ProjectionTotals = accounts.reduce(
       (totals, account) => {
-        const projectionTotals = buildProjection(account).totals
+        const projectionTotals = buildProjection(account, termYears).totals
 
         return {
           totalContributions:
@@ -331,38 +342,6 @@ function App() {
       },
     )
 
-    if (inflationState.isEnabled && maxTermYears > 0) {
-      return applyInflationToTotals(
-        nominalTotals,
-        inflationState.annualRatePercent,
-        maxTermYears,
-      )
-    }
-
-    return nominalTotals
-  }, [accounts, inflationState, maxTermYears])
-
-  const goalProjectedTotals: ProjectionTotals = useMemo(() => {
-    if (!goalState.isGoalMode || !hasAccounts) {
-      return grandTotals
-    }
-
-    const termYears = goalState.calculationType === 'contribution'
-      ? (goalState.termYears ?? 30)
-      : Math.max(...accounts.map((a) => a.termYears), 0)
-
-    const nominalTotals = accounts.reduce(
-      (totals, account) => {
-        const projection = buildProjection({ ...account, termYears })
-        return {
-          totalContributions: totals.totalContributions + projection.totals.totalContributions,
-          totalReturns: totals.totalReturns + projection.totals.totalReturns,
-          finalBalance: totals.finalBalance + projection.totals.finalBalance,
-        }
-      },
-      { totalContributions: 0, totalReturns: 0, finalBalance: 0 },
-    )
-
     if (inflationState.isEnabled && termYears > 0) {
       return applyInflationToTotals(
         nominalTotals,
@@ -372,7 +351,7 @@ function App() {
     }
 
     return nominalTotals
-  }, [accounts, goalState, hasAccounts, grandTotals, inflationState])
+  }, [accounts, inflationState, termYears])
 
   const goalCalculationResult: GoalCalculationResult | null = useMemo(() => {
     if (!goalState.isGoalMode || !hasAccounts) {
@@ -383,7 +362,7 @@ function App() {
       return calculateRequiredContribution({
         accounts,
         targetBalance: goalState.targetBalance,
-        termYears: goalState.termYears ?? 30,
+        termYears,
         contributionFrequency: goalState.contributionFrequency,
       })
     }
@@ -394,7 +373,7 @@ function App() {
       contributionAmount: goalState.contributionAmount ?? 0,
       contributionFrequency: goalState.contributionFrequency,
     })
-  }, [accounts, goalState, hasAccounts])
+  }, [accounts, goalState, hasAccounts, termYears])
 
   const allocations = useMemo(() => {
     if (!goalState.isGoalMode || !hasAccounts || !goalCalculationResult?.isReachable) {
@@ -410,10 +389,6 @@ function App() {
       return []
     }
 
-    const termYears = goalState.calculationType === 'contribution'
-      ? (goalState.termYears ?? 30)
-      : Math.max(...accounts.map((a) => a.termYears), 0)
-
     return calculateAllocation({
       accounts,
       totalContribution,
@@ -421,7 +396,7 @@ function App() {
       targetFrequency: goalState.contributionFrequency,
       termYears,
     })
-  }, [accounts, goalState, hasAccounts, goalCalculationResult])
+  }, [accounts, goalState, hasAccounts, goalCalculationResult, termYears])
 
   return (
     <div className="app">
@@ -436,6 +411,7 @@ function App() {
             </p>
           </div>
           <div className="app__header-controls">
+            <GlobalTermInput termYears={termYears} onChange={handleTermChange} />
             <CurrentAgeInput currentAge={currentAge} onChange={setCurrentAge} />
             <InflationControls
               inflationState={inflationState}
@@ -496,7 +472,7 @@ function App() {
         ) : null}
         {goalState.isGoalMode && hasAccounts && (
           <GoalProgressBar
-            currentBalance={goalProjectedTotals.finalBalance}
+            currentBalance={grandTotals.finalBalance}
             targetBalance={goalState.targetBalance}
           />
         )}
@@ -524,7 +500,7 @@ function App() {
             <AllocationSuggestions
               allocations={allocations}
               frequency={goalState.contributionFrequency}
-              isGoalMet={goalProjectedTotals.finalBalance >= goalState.targetBalance}
+              isGoalMet={grandTotals.finalBalance >= goalState.targetBalance}
             />
           )}
         </section>
@@ -560,6 +536,7 @@ function App() {
                 key={account.id}
                 account={account}
                 allAccounts={accounts}
+                termYears={termYears}
                 currentAge={currentAge}
                 inflationState={inflationState}
                 onUpdate={handleAccountUpdate}
@@ -571,6 +548,7 @@ function App() {
           <AccountListView
             accounts={accounts}
             allAccounts={accounts}
+            termYears={termYears}
             currentAge={currentAge}
             inflationState={inflationState}
             onUpdate={handleAccountUpdate}
