@@ -370,7 +370,7 @@ const SHARED_FIELD_CONFIG: {
     description: 'Available contribution room is shared across all accounts of this type',
   },
   customAnnualRoomIncrease: {
-    label: 'Custom annual room increase',
+    label: 'Annual room increase',
     description: 'Custom annual increase amount is shared across all TFSA accounts',
   },
   annualIncomeForRrsp: {

@@ -313,7 +313,7 @@ describe('getSharedFieldLabel', () => {
   })
 
   it('returns correct label for customAnnualRoomIncrease', () => {
-    expect(getSharedFieldLabel('customAnnualRoomIncrease')).toBe('Custom annual room increase')
+    expect(getSharedFieldLabel('customAnnualRoomIncrease')).toBe('Annual room increase')
   })
 
   it('returns correct label for annualIncomeForRrsp', () => {

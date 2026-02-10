@@ -157,13 +157,13 @@ describe('AccountForm', () => {
         <AccountForm account={buildAccount({ accountType: 'tfsa' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
-      expect(within(container).queryByLabelText(/Custom annual room/)).toBeTruthy()
+      expect(within(container).queryByLabelText(/Annual room/)).toBeTruthy()
 
       rerender(
         <AccountForm account={buildAccount({ accountType: 'rrsp' })} termYears={10} onUpdate={vi.fn()} />,
       )
 
-      expect(within(container).queryByLabelText(/Custom annual room/)).toBeNull()
+      expect(within(container).queryByLabelText(/Annual room/)).toBeNull()
     })
 
     it('updates shared room fields when account values change', () => {
@@ -176,7 +176,7 @@ describe('AccountForm', () => {
         <AccountForm account={initialAccount} termYears={10} onUpdate={vi.fn()} />,
       )
       const contributionInput = within(container).getByLabelText(/Contribution room/) as HTMLInputElement
-      const customRoomInput = within(container).getByLabelText(/Custom annual room/) as HTMLInputElement
+      const customRoomInput = within(container).getByLabelText(/Annual room increase/) as HTMLInputElement
 
       expect(contributionInput.value).toBe('12000')
       expect(customRoomInput.value).toBe('7000')
@@ -214,14 +214,14 @@ describe('AccountForm', () => {
       fireEvent.change(within(container).getByLabelText(/Contribution room/), {
         target: { value: '0' },
       })
-      fireEvent.change(within(container).getByLabelText(/Custom annual room/), {
+      fireEvent.change(within(container).getByLabelText(/Annual room increase/), {
         target: { value: '0' },
       })
 
       fireEvent.change(within(container).getByLabelText(/Contribution room/), {
         target: { value: '' },
       })
-      fireEvent.change(within(container).getByLabelText(/Custom annual room/), {
+      fireEvent.change(within(container).getByLabelText(/Annual room increase/), {
         target: { value: '' },
       })
 
