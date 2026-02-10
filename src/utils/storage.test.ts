@@ -115,6 +115,28 @@ describe('loadGoalState', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('returns default state when stored value has wrong shape', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-goal', JSON.stringify({ foo: 'bar' }))
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadGoalState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_GOAL_STATE)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns default state when stored value is a number', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-goal', '42')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadGoalState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_GOAL_STATE)
+
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('saveGoalState', () => {
@@ -222,14 +244,53 @@ describe('loadInflationState', () => {
     vi.unstubAllGlobals()
   })
 
-  it('merges partial stored state with defaults', () => {
+  it('returns default state when stored value is missing required fields', () => {
     const mockStorage = buildMockStorage()
     mockStorage.setItem('investment-tracker-inflation', JSON.stringify({ isEnabled: true }))
     vi.stubGlobal('window', { localStorage: mockStorage })
 
     const result = loadInflationState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('merges valid stored state with defaults', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem(
+      'investment-tracker-inflation',
+      JSON.stringify({ isEnabled: true, annualRatePercent: 3.5 }),
+    )
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
     expect(result.isEnabled).toBe(true)
-    expect(result.annualRatePercent).toBe(DEFAULT_INFLATION_STATE.annualRatePercent)
+    expect(result.annualRatePercent).toBe(3.5)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns default state when annualRatePercent is a string', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem(
+      'investment-tracker-inflation',
+      JSON.stringify({ isEnabled: true, annualRatePercent: '2.5' }),
+    )
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('returns default state when stored value is null JSON', () => {
+    const mockStorage = buildMockStorage()
+    mockStorage.setItem('investment-tracker-inflation', 'null')
+    vi.stubGlobal('window', { localStorage: mockStorage })
+
+    const result = loadInflationState({ storageAvailable: true })
+    expect(result).toEqual(DEFAULT_INFLATION_STATE)
 
     vi.unstubAllGlobals()
   })

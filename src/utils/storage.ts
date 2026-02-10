@@ -3,6 +3,11 @@ import { DEFAULT_GOAL_STATE } from '../types/goal'
 import type { InflationState } from '../types/inflation'
 import { DEFAULT_INFLATION_STATE } from '../types/inflation'
 import type { ViewPreference } from '../types/investment'
+import {
+  isValidGoalState,
+  isValidInflationState,
+  isStoragePayloadWithinLimit,
+} from './validation'
 
 const ACCOUNTS_STORAGE_KEY = 'investment-tracker-accounts'
 const TERM_YEARS_STORAGE_KEY = 'investment-tracker-term-years'
@@ -35,8 +40,6 @@ const DEFAULT_TERM_YEARS = 10
 const MIN_TERM_YEARS = 1
 const MAX_TERM_YEARS = 100
 
-type LegacyAccount = { termYears?: number; [key: string]: unknown }
-
 /**
  * One-time migration: extract the max termYears from legacy per-account data,
  * save it as the global term, and strip the field from stored accounts.
@@ -49,7 +52,7 @@ const migrateLegacyTermYears = (): number => {
       return DEFAULT_TERM_YEARS
     }
 
-    const accounts = JSON.parse(raw) as LegacyAccount[]
+    const accounts: unknown = JSON.parse(raw)
     if (!Array.isArray(accounts) || accounts.length === 0) {
       return DEFAULT_TERM_YEARS
     }
@@ -158,8 +161,17 @@ export const loadGoalState = ({
     return DEFAULT_GOAL_STATE
   }
 
+  if (!isStoragePayloadWithinLimit(storedValue)) {
+    console.warn('Goal state payload exceeds size limit. Using defaults.')
+    return DEFAULT_GOAL_STATE
+  }
+
   try {
-    const parsed = JSON.parse(storedValue) as Partial<GoalState>
+    const parsed: unknown = JSON.parse(storedValue)
+    if (!isValidGoalState(parsed)) {
+      console.warn('Stored goal state has invalid shape. Using defaults.')
+      return DEFAULT_GOAL_STATE
+    }
     return {
       ...DEFAULT_GOAL_STATE,
       ...parsed,
@@ -219,8 +231,17 @@ export const loadInflationState = ({
     return DEFAULT_INFLATION_STATE
   }
 
+  if (!isStoragePayloadWithinLimit(storedValue)) {
+    console.warn('Inflation state payload exceeds size limit. Using defaults.')
+    return DEFAULT_INFLATION_STATE
+  }
+
   try {
-    const parsed = JSON.parse(storedValue) as Partial<InflationState>
+    const parsed: unknown = JSON.parse(storedValue)
+    if (!isValidInflationState(parsed)) {
+      console.warn('Stored inflation state has invalid shape. Using defaults.')
+      return DEFAULT_INFLATION_STATE
+    }
     return {
       ...DEFAULT_INFLATION_STATE,
       ...parsed,

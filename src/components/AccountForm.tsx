@@ -25,6 +25,7 @@ import {
   isLockedAccountType,
 } from '../constants/accountTypes'
 import { getSharedFieldSeedValues } from '../utils/sharedContributionRoom'
+import { sanitizeName } from '../utils/validation'
 import SharedFieldIndicator from './SharedFieldIndicator'
 
 const DEFAULT_CONTRIBUTION = {
@@ -129,7 +130,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       : formatNumberInput(account.customAnnualRoomIncrease)
 
   const handleNameChange = (value: string) => {
-    onUpdate(buildPayload(account.id, { name: value }))
+    onUpdate(buildPayload(account.id, { name: sanitizeName(value) }))
   }
 
   const handleAccountTypeChange = (value: string) => {
@@ -273,7 +274,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       onUpdateField(0)
       return
     }
-    onUpdateField(parsed)
+    onUpdateField(Math.max(0, parsed))
   }
 
   const handlePrincipalChange = (value: string) => {
@@ -290,7 +291,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       field: 'annualRatePercent',
       value,
       onUpdateField: (nextValue) =>
-        onUpdate(buildPayload(account.id, { annualRatePercent: nextValue })),
+        onUpdate(buildPayload(account.id, { annualRatePercent: Math.min(100, nextValue) })),
     })
   }
 
@@ -357,9 +358,13 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       field: inputField,
       value,
       onUpdateField: (nextValue) => {
+        const clampedValue =
+          field === 'startMonth' || field === 'endMonth'
+            ? Math.max(1, Math.min(totalMonths, nextValue))
+            : nextValue
         const updatedContribution = {
           ...contribution,
-          [field]: nextValue,
+          [field]: clampedValue,
         }
 
         onUpdate(
@@ -433,6 +438,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
         <input
           id={`${account.id}-name`}
           type="text"
+          maxLength={100}
           value={account.name}
           onChange={(event) => handleNameChange(event.target.value)}
         />

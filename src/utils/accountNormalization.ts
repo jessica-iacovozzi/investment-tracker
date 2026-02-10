@@ -11,6 +11,7 @@ import {
   isValidAccountType,
 } from '../constants/accountTypes'
 import { normalizeTimingForFrequency } from './contributionTiming'
+import { sanitizeName } from './validation'
 
 type NormalizeAccountInput = {
   account: AccountInput
@@ -62,6 +63,7 @@ export const normalizeAccount = ({
   return {
     account: {
       ...account,
+      name: sanitizeName(account.name) || account.name,
       compoundingFrequency: normalizedFrequency,
       contributionTiming: normalizedTiming,
       accountType: normalizedAccountType,

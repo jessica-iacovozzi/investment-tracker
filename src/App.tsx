@@ -33,6 +33,10 @@ import {
   clearViewPreference,
 } from './utils/storage'
 import {
+  isValidAccountInputArray,
+  isStoragePayloadWithinLimit,
+} from './utils/validation'
+import {
   calculateRequiredContribution,
   calculateRequiredTerm,
   calculateAllocation,
@@ -171,9 +175,17 @@ const loadAccounts = ({ storageAvailable, termYears }: { storageAvailable: boole
     return normalizeAccounts(seedAccounts(termYears))
   }
 
+  if (!isStoragePayloadWithinLimit(storedValue)) {
+    console.warn('Accounts payload exceeds size limit. Using defaults.')
+    return normalizeAccounts(seedAccounts(termYears))
+  }
+
   try {
-    const parsed = JSON.parse(storedValue) as AccountInput[]
-    if (!parsed.length) {
+    const parsed: unknown = JSON.parse(storedValue)
+    if (!isValidAccountInputArray(parsed) || !parsed.length) {
+      if (!isValidAccountInputArray(parsed)) {
+        console.warn('Stored accounts have invalid shape. Using defaults.')
+      }
       return normalizeAccounts(seedAccounts(termYears))
     }
 
