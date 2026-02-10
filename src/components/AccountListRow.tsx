@@ -136,17 +136,6 @@ function AccountListRow({
 
       {isExpanded && (
         <div className="account-list-row__detail" role="region" aria-label={`${account.name} details`}>
-          <div className="account-list-row__detail-actions">
-            <button
-              className="button button--danger"
-              type="button"
-              onClick={handleDelete}
-              aria-label={`Delete ${account.name} account`}
-            >
-              Delete
-            </button>
-          </div>
-
           {projection ? (
             <div className="account-list-row__detail-content">
               <AccountForm
@@ -179,6 +168,16 @@ function AccountListRow({
               Unable to compute projection for this account.
             </p>
           )}
+          <div className="account-list-row__detail-actions">
+            <button
+              className="button button--danger"
+              type="button"
+              onClick={handleDelete}
+              aria-label={`Delete ${account.name} account`}
+            >
+              Delete account
+            </button>
+          </div>
         </div>
       )}
     </div>

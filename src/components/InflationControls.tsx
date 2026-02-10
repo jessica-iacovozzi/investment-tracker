@@ -64,8 +64,9 @@ function InflationControls({ inflationState, onUpdate }: InflationControlsProps)
 
       {inflationState.isEnabled && (
         <div className="inflation-controls__input">
-          <label htmlFor="inflation-rate">Inflation rate (%)</label>
-          <input
+          <div>
+            <label htmlFor="inflation-rate">Inflation rate (%)</label>
+            <input
             id="inflation-rate"
             type="number"
             min={MIN_INFLATION_RATE}
@@ -75,7 +76,8 @@ function InflationControls({ inflationState, onUpdate }: InflationControlsProps)
             onChange={(event) => handleRateChange(event.target.value)}
             aria-describedby="inflation-rate-help"
             aria-invalid={showError}
-          />
+            />
+          </div>
           <p
             id="inflation-rate-help"
             className="field-help"

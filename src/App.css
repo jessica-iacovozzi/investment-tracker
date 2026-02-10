@@ -136,6 +136,7 @@
   background: rgba(248, 113, 113, 0.15);
   color: #fca5a5;
   border: 1px solid rgba(248, 113, 113, 0.4);
+  width: 100%;
 }
 
 .button--danger:hover {
@@ -307,7 +308,7 @@
 
 /* Expanded detail panel */
 .account-list-row__detail {
-  padding: 0 1.25rem 1.25rem;
+  padding: 1.25rem 1.25rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   animation: listRowExpand 0.2s ease-out;
 }
@@ -325,8 +326,7 @@
 
 .account-list-row__detail-actions {
   display: flex;
-  justify-content: flex-end;
-  padding: 0.75rem 0;
+  padding-top: 1.25rem;
 }
 
 .account-list-row__detail-content {
@@ -598,10 +598,10 @@
 .field-row {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
 }
 
-.field-row--stack {
+.account-card .field-row--stack {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
@@ -1385,6 +1385,7 @@
 
 .inflation-controls__input {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 0.5rem;
 }

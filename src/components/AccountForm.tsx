@@ -433,7 +433,8 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
 
   return (
     <form className="account-form" aria-label={`${account.name} inputs`}>
-      <div className="field-group">
+      <div className="field-row field-row--stack">
+      <div className="field-group field-group--full">
         <label htmlFor={`${account.id}-name`}>Account name</label>
         <input
           id={`${account.id}-name`}
@@ -444,7 +445,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
         />
       </div>
 
-      <div className="field-group">
+      <div className="field-group field-group--full">
         <label htmlFor={`${account.id}-account-type`}>Account type</label>
         <select
           id={`${account.id}-account-type`}
@@ -460,7 +461,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       </div>
 
       {isTaxAdvantagedAccount(account.accountType) && (
-      <div className="field-group">
+      <div className="field-group field-group--full">
         <label htmlFor={`${account.id}-contribution-room`} className="field-label--with-info">
           Contribution room ($)
           <span className="field-label__info" title="Available contribution room for tax-advantaged accounts like TFSA, RRSP, or FHSA. Leave empty if not applicable.">
@@ -507,7 +508,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       )}
 
       {account.accountType === 'rrsp' && (
-        <div className="field-group">
+        <div className="field-group field-group--full">
           <label htmlFor={`${account.id}-annual-income`} className="field-label--with-info">
             Annual income ($)
             <span className="field-label__info" title="Your annual earned income is used to calculate your RRSP contribution limit (18% of income, up to the annual maximum).">
@@ -554,7 +555,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       )}
 
       {account.accountType === 'fhsa' && (
-        <div className="field-group">
+        <div className="field-group field-group--full">
           <label htmlFor={`${account.id}-fhsa-lifetime`} className="field-label--with-info">
             Lifetime contributions to date ($)
             <span className="field-label__info" title="Total amount you have contributed to your FHSA since opening. The lifetime maximum is $40,000.">
@@ -605,9 +606,9 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
       )}
 
       {account.accountType === 'tfsa' && (
-        <div className="field-group">
+        <div className="field-group field-group--full">
           <label htmlFor={`${account.id}-custom-annual-room`} className="field-label--with-info">
-            Custom annual room increase ($)
+            Annual room increase ($)
             <span className="field-label__info" title="Override the default annual TFSA limit ($7,000) if you expect a different indexed amount in future years.">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -653,8 +654,9 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
           />
         </div>
       )}
+      </div>
 
-      <div className="field-row">
+        <div className="field-row field-row--stack">
         <div className="field-group">
           <label htmlFor={`${account.id}-principal`}>Current invested ($)</label>
           <input
@@ -679,7 +681,7 @@ function AccountForm({ account, termYears, onUpdate, sameTypeAccountCount, allAc
           />
         </div>
 
-        <div className="field-group">
+        <div className="field-group field-group--full">
           <label htmlFor={`${account.id}-compounding`}>
             Compounding frequency
           </label>
