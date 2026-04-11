@@ -42,10 +42,30 @@ const getYearTicks = (points: ProjectionPoint[]) => {
 }
 
 function AccountChart({ data, inflationEnabled }: AccountChartProps) {
+  const firstPoint = data[0]
+  const lastPoint = data[data.length - 1]
+  
+  let chartAriaLabel = 'Line chart of investment projection'
+  
+  if (firstPoint && lastPoint) {
+    const years = Math.round(lastPoint.year)
+    const yearText = years === 1 ? 'year' : 'years'
+    
+    if (data.length === 1) {
+      chartAriaLabel = `Line chart showing starting balance of ${formatCurrency(firstPoint.balance)}`
+    } else {
+      chartAriaLabel = `Line chart showing projected balance from ${formatCurrency(firstPoint.balance)} to ${formatCurrency(lastPoint.balance)} over ${years} ${yearText}`
+      
+      if (inflationEnabled && lastPoint.realBalance !== undefined) {
+        chartAriaLabel += `, inflation-adjusted real balance ${formatCurrency(lastPoint.realBalance)}`
+      }
+    }
+  }
+
   return (
     <section className="chart-card" aria-label="Projection chart">
       <h3 className="chart-card__title">Growth projection</h3>
-      <div className="chart-card__body" role="img" aria-label="Line chart">
+      <div className="chart-card__body" role="img" aria-label={chartAriaLabel}>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="rgba(255, 255, 255, 0.15)" />

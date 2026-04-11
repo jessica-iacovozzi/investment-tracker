@@ -126,8 +126,8 @@ function GoalInputPanel({
         </div>
 
         <div className="field-group">
-          <span className="field-label">Calculate</span>
-          <div className="goal-input-panel__toggle-group" role="radiogroup">
+          <span id="calc-type-label" className="field-label">Calculate</span>
+          <div className="goal-input-panel__toggle-group" role="radiogroup" aria-labelledby="calc-type-label">
             {(['contribution', 'term'] as CalculationType[]).map((type) => (
               <button
                 key={type}

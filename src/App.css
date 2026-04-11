@@ -21,6 +21,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .app__actions {
@@ -656,7 +657,7 @@
 .field-group input,
 .field-group select {
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.6rem 0.7rem;
   color: var(--text-primary);
@@ -891,7 +892,7 @@
 .current-age-input input {
   width: 80px;
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.5rem 0.6rem;
   color: var(--text-primary);
@@ -928,7 +929,7 @@
 .global-term-input input {
   width: 80px;
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.5rem 0.6rem;
   color: var(--text-primary);
@@ -1065,7 +1066,7 @@
   flex: 1;
   padding: 0.7rem 1rem;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -1117,7 +1118,7 @@
 .field-input {
   width: 100%;
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.6rem 0.7rem;
   color: var(--text-primary);
@@ -1133,7 +1134,7 @@
 .field-select {
   width: 100%;
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.6rem 0.7rem;
   color: var(--text-primary);
@@ -1227,6 +1228,25 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.sr-only--focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1.25rem;
+  margin: 0 0 0.5rem;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  display: inline-block;
+  background: var(--accent);
+  color: #101014;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  text-decoration: none;
+  z-index: 100;
 }
 
 .allocation-suggestions__subtitle {
@@ -1402,7 +1422,7 @@
 .inflation-controls__input input {
   width: 80px;
   background: rgba(15, 15, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   padding: 0.5rem 0.6rem;
   margin-left: 0.75rem;
@@ -1575,12 +1595,22 @@
     font-size: 0.75rem;
     padding: 0.4rem 0.6rem;
   }
-  
+
   .shared-fields-breakdown {
     padding: 0.75rem;
   }
-  
+
   .shared-fields-breakdown__title {
     font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

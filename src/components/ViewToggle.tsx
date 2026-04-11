@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import { useRef, type KeyboardEvent } from 'react'
 import type { ViewPreference } from '../types/investment'
 
 type ViewToggleProps = {
@@ -16,6 +16,16 @@ const TABS: { value: ViewPreference; label: string }[] = [
  * Implements WAI-ARIA tablist pattern with full keyboard navigation.
  */
 function ViewToggle({ activeView, onChange }: ViewToggleProps) {
+  const tabRefs = useRef<Map<ViewPreference, HTMLButtonElement>>(new Map())
+
+  const setTabRef = (value: ViewPreference, element: HTMLButtonElement | null) => {
+    if (element) {
+      tabRefs.current.set(value, element)
+    } else {
+      tabRefs.current.delete(value)
+    }
+  }
+
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const currentIndex = TABS.findIndex((tab) => tab.value === activeView)
     let nextIndex = currentIndex
@@ -36,11 +46,10 @@ function ViewToggle({ activeView, onChange }: ViewToggleProps) {
       return
     }
 
-    onChange(TABS[nextIndex].value)
+    const nextTab = TABS[nextIndex]
+    onChange(nextTab.value)
 
-    const nextButton = document.querySelector<HTMLButtonElement>(
-      `[data-view-tab="${TABS[nextIndex].value}"]`,
-    )
+    const nextButton = tabRefs.current.get(nextTab.value)
     nextButton?.focus()
   }
 
@@ -52,10 +61,13 @@ function ViewToggle({ activeView, onChange }: ViewToggleProps) {
         return (
           <button
             key={tab.value}
+            ref={(el) => setTabRef(tab.value, el)}
+            id={`view-tab-${tab.value}`}
             role="tab"
             type="button"
             className={`view-toggle__tab${isActive ? ' view-toggle__tab--active' : ''}`}
             aria-selected={isActive}
+            aria-controls={`view-panel-${tab.value}`}
             tabIndex={isActive ? 0 : -1}
             data-view-tab={tab.value}
             onClick={() => onChange(tab.value)}

@@ -412,6 +412,9 @@ function App() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="sr-only sr-only--focusable">
+        Skip to main content
+      </a>
       <header className="app__header">
         <div className="app__header-top">
           <div>
@@ -490,6 +493,7 @@ function App() {
         )}
       </header>
 
+      <main id="main-content">
       {!storageAvailable && (
         <div className="storage-warning" role="status" aria-live="polite">
           <span className="storage-warning__title">Limited persistence</span>
@@ -542,7 +546,7 @@ function App() {
 
       {hasAccounts ? (
         viewPreference === 'cards' ? (
-          <section className="account-grid" aria-label="Investment accounts" role="tabpanel">
+          <section id="view-panel-cards" className="account-grid" aria-label="Investment accounts" role="tabpanel">
             {accounts.map((account) => (
               <AccountCard
                 key={account.id}
@@ -589,6 +593,8 @@ function App() {
           </button>
         </section>
       )}
+
+      </main>
 
       <ShareFooter shareUrl={shareUrl} />
       <footer className="app__credit">

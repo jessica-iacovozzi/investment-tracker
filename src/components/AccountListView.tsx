@@ -33,7 +33,7 @@ function AccountListView({
   }
 
   return (
-    <div className="account-list" role="tabpanel" aria-label="List view">
+    <div id="view-panel-list" className="account-list" role="tabpanel" aria-label="List view">
       {accounts.map((account) => (
         <AccountListRow
           key={account.id}

@@ -103,7 +103,7 @@ function AccountListRow({
     : 0
 
   return (
-    <div
+    <article
       className={`account-list-row${isExpanded ? ' account-list-row--expanded' : ''}`}
       aria-label={`${account.name} account`}
     >
@@ -180,7 +180,7 @@ function AccountListRow({
           </div>
         </div>
       )}
-    </div>
+    </article>
   )
 }
 

@@ -106,6 +106,7 @@ describe('ContributionRoomWarning', () => {
     )
 
     const alert = within(container).getByRole('alert')
-    expect(alert.getAttribute('aria-live')).toBe('polite')
+    // role="alert" implies aria-live="assertive" — no redundant aria-live attribute needed
+    expect(alert.getAttribute('aria-live')).toBeNull()
   })
 })

@@ -45,7 +45,6 @@ function ContributionRoomWarning({
     <div
       className="contribution-room-warning"
       role="alert"
-      aria-live="polite"
     >
       <div className="contribution-room-warning__icon" aria-hidden="true">
         <svg
