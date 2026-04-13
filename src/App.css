@@ -950,6 +950,7 @@
 @media (max-width: 720px) {
   .app__header-top {
     flex-direction: column;
+    padding: 0.5rem;
   }
 
   .app__header-controls {
@@ -1602,6 +1603,18 @@
 
   .shared-fields-breakdown__title {
     font-size: 0.8rem;
+  }
+
+  .inflation-controls {
+    align-items: start;
+  }
+
+  .app__header {
+    gap: 0;
+  }
+
+  .view-toggle {
+    display: none;
   }
 }
 

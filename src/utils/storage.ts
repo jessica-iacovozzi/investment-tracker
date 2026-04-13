@@ -14,8 +14,19 @@ const TERM_YEARS_STORAGE_KEY = 'investment-tracker-term-years'
 const GOAL_STORAGE_KEY = 'investment-tracker-goal'
 const INFLATION_STORAGE_KEY = 'investment-tracker-inflation'
 const VIEW_PREFERENCE_STORAGE_KEY = 'investmentTracker_viewPreference'
-const DEFAULT_VIEW_PREFERENCE: ViewPreference = 'list'
 const VALID_VIEW_PREFERENCES: ViewPreference[] = ['cards', 'list']
+const MOBILE_BREAKPOINT = 720
+
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.innerWidth <= MOBILE_BREAKPOINT
+}
+
+const getDefaultViewPreference = (): ViewPreference => {
+  return isMobileDevice() ? 'cards' : 'list'
+}
 
 /**
  * Check if localStorage is available for read/write operations.
@@ -293,19 +304,19 @@ export const loadViewPreference = ({
   storageAvailable: boolean
 }): ViewPreference => {
   if (typeof window === 'undefined' || !storageAvailable) {
-    return DEFAULT_VIEW_PREFERENCE
+    return getDefaultViewPreference()
   }
 
   const storedValue = window.localStorage.getItem(VIEW_PREFERENCE_STORAGE_KEY)
   if (!storedValue) {
-    return DEFAULT_VIEW_PREFERENCE
+    return getDefaultViewPreference()
   }
 
   if (VALID_VIEW_PREFERENCES.includes(storedValue as ViewPreference)) {
     return storedValue as ViewPreference
   }
 
-  return DEFAULT_VIEW_PREFERENCE
+  return getDefaultViewPreference()
 }
 
 /**
